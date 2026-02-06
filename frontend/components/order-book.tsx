@@ -6,14 +6,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useYellowContext } from "@/components/providers/yellow-provider";
 import { useTransferPosition } from "@/hooks/use-market";
-import { formatAddress } from "@/lib/gaussian";
+import { formatAddress, computePositionFairValue } from "@/lib/gaussian";
 import { cn } from "@/lib/utils";
-import type { PositionData } from "@/hooks/use-market";
+import type { MarketData, PositionData } from "@/hooks/use-market";
 import type { AskOrder } from "@/lib/yellow-types";
 
 interface OrderBookProps {
 	marketAddress: `0x${string}`;
 	positions?: PositionData[];
+	market?: MarketData;
+	allPositions?: PositionData[];
 	onTxSuccess?: () => void;
 }
 
@@ -25,7 +27,7 @@ function timeAgo(ts: number): string {
 	return `${Math.floor(diff / 3600)}h ago`;
 }
 
-export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderBookProps) {
+export function OrderBook({ marketAddress, positions = [], market, allPositions = [], onTxSuccess }: OrderBookProps) {
 	const { address: account } = useAccount();
 	const yellow = useYellowContext();
 	const {
@@ -74,6 +76,21 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 	);
 	const selectedPosition = myPositions.find((p) => p.id === sellPositionId);
 
+	// Fair value computation helper
+	const totalPoolNum = market ? Number(market.totalPool) / 1e18 : 0;
+	const aggMu = market?.aggMu ?? 0;
+	const canComputeFV = allPositions.length > 0 && totalPoolNum > 0;
+
+	const getFairValue = useCallback(
+		(posMu: number, posSigma: number): number | null => {
+			if (!canComputeFV) return null;
+			return computePositionFairValue(posMu, posSigma, allPositions, totalPoolNum, aggMu);
+		},
+		[canComputeFV, allPositions, totalPoolNum, aggMu],
+	);
+
+	const selectedFV = selectedPosition ? getFairValue(selectedPosition.mu, selectedPosition.sigma) : null;
+
 	// All asks sorted by price descending (highest at top like exchange)
 	const allAsks = [...asks].sort((a, b) => Number(b.price) - Number(a.price));
 	// Incoming asks only (for buy buttons)
@@ -102,6 +119,13 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 			setTick((c) => c + 1); // force re-render to drop expired fills
 		}
 	}, [isTransferConfirmed]);
+
+	// Auto-suggest fair value as default ask price when position is selected
+	useEffect(() => {
+		if (selectedFV !== null && sellPositionId !== null) {
+			setAskPrice(selectedFV.toFixed(2));
+		}
+	}, [sellPositionId, selectedFV]);
 
 	useEffect(() => {
 		chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -347,8 +371,9 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 			{/* ── EXCHANGE-STYLE ORDER BOOK ── */}
 			<div className="font-mono text-[11px]">
 				{/* Column headers */}
-				<div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-muted-foreground border-b border-border/50">
+				<div className="grid grid-cols-5 px-3 py-1.5 text-[10px] text-muted-foreground border-b border-border/50">
 					<span>Price</span>
+					<span className="text-right">FV</span>
 					<span className="text-right">Size</span>
 					<span className="text-right">Total</span>
 					<span className="text-right">Action</span>
@@ -365,10 +390,18 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 							const depthPct = (ask.cumTotal / maxAskTotal) * 100;
 							const isOwn = account && ask.from.toLowerCase() === account.toLowerCase();
 							const canBuy = !isOwn;
+							const fv = getFairValue(ask.mu, ask.sigma);
+							const askNum = Number(ask.price);
+							// Color: green if ask <= FV (good deal), red if ask > 1.5x FV (overpriced)
+							const fvColor = fv !== null
+								? askNum <= fv ? "text-emerald-500 dark:text-emerald-400"
+								: askNum > fv * 1.5 ? "text-red-500 dark:text-red-400"
+								: "text-amber-500 dark:text-amber-400"
+								: "text-muted-foreground";
 							return (
 								<div
 									key={`${ask.positionId}-${ask.from}-${ask.ts}`}
-									className="relative grid grid-cols-4 items-center px-3 py-1 hover:bg-red-500/5 transition-colors group"
+									className="relative grid grid-cols-5 items-center px-3 py-1 hover:bg-red-500/5 transition-colors group"
 								>
 									{/* Depth bar */}
 									<div
@@ -376,7 +409,10 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 										style={{ width: `${depthPct}%` }}
 									/>
 									<span className="relative text-red-500 dark:text-red-400 font-medium">
-										{Number(ask.price).toFixed(2)}
+										{askNum.toFixed(2)}
+									</span>
+									<span className={cn("relative text-right font-medium", fvColor)} title={fv !== null ? `Fair value: ${fv.toFixed(2)}` : "N/A"}>
+										{fv !== null ? fv.toFixed(1) : "—"}
 									</span>
 									<span className="relative text-right text-foreground" title={`#${ask.positionId} ${formatAddress(ask.from)}`}>
 										{ask.collateral}
@@ -441,7 +477,7 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 							return (
 								<div
 									key={`${fill.positionId}-${fill.ts}`}
-									className="relative grid grid-cols-4 items-center px-3 py-1"
+									className="relative grid grid-cols-5 items-center px-3 py-1"
 								>
 									<div
 										className="absolute right-0 top-0 bottom-0 bg-emerald-500/10 dark:bg-emerald-500/15 pointer-events-none"
@@ -449,6 +485,9 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 									/>
 									<span className="relative text-emerald-500 dark:text-emerald-400 font-medium">
 										{Number(fill.price).toFixed(2)}
+									</span>
+									<span className="relative text-right text-muted-foreground">
+										—
 									</span>
 									<span className="relative text-right text-foreground">
 										#{fill.positionId}
@@ -507,20 +546,27 @@ export function OrderBook({ marketAddress, positions = [], onTxSuccess }: OrderB
 							</Button>
 						</div>
 						{selectedPosition && (
-							<div className="grid grid-cols-3 gap-2 text-center text-[10px] rounded bg-muted/30 p-1.5">
-								<div>
-									<span className="font-mono font-semibold text-foreground">{selectedPosition.mu.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-									<span className="text-muted-foreground ml-0.5">{"\u03BC"}</span>
+							<>
+								<div className="grid grid-cols-3 gap-2 text-center text-[10px] rounded bg-muted/30 p-1.5">
+									<div>
+										<span className="font-mono font-semibold text-foreground">{selectedPosition.mu.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+										<span className="text-muted-foreground ml-0.5">{"\u03BC"}</span>
+									</div>
+									<div>
+										<span className="font-mono font-semibold text-foreground">{selectedPosition.sigma.toFixed(0)}</span>
+										<span className="text-muted-foreground ml-0.5">{"\u03C3"}</span>
+									</div>
+									<div>
+										<span className="font-mono font-semibold text-foreground">{(Number(selectedPosition.collateral) / 1e18).toFixed(0)}</span>
+										<span className="text-muted-foreground ml-0.5">col</span>
+									</div>
 								</div>
-								<div>
-									<span className="font-mono font-semibold text-foreground">{selectedPosition.sigma.toFixed(0)}</span>
-									<span className="text-muted-foreground ml-0.5">{"\u03C3"}</span>
-								</div>
-								<div>
-									<span className="font-mono font-semibold text-foreground">{(Number(selectedPosition.collateral) / 1e18).toFixed(0)}</span>
-									<span className="text-muted-foreground ml-0.5">col</span>
-								</div>
-							</div>
+								{selectedFV !== null && (
+									<p className="text-[10px] text-muted-foreground">
+										Fair value: <span className="font-mono font-semibold text-foreground">~{selectedFV.toFixed(2)}</span> yUSD
+									</p>
+								)}
+							</>
 						)}
 					</div>
 				)}

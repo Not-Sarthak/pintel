@@ -5,6 +5,27 @@ export function gaussianPdf(x: number, mu: number, sigma: number): number {
 	return coefficient * Math.exp(exponent);
 }
 
+/**
+ * Compute fair value of a position — mirrors contract's getPositionValue().
+ * fair_value = totalPool * PDF(aggMu, pos.mu, pos.sigma) / sum(all PDFs at aggMu)
+ */
+export function computePositionFairValue(
+	posMu: number,
+	posSigma: number,
+	allPositions: { mu: number; sigma: number }[],
+	totalPool: number,
+	aggMu: number,
+): number {
+	if (allPositions.length === 0 || totalPool <= 0) return 0;
+	const pdfSum = allPositions.reduce(
+		(sum, p) => sum + gaussianPdf(aggMu, p.mu, p.sigma),
+		0,
+	);
+	if (pdfSum <= 0) return 0;
+	const posPdf = gaussianPdf(aggMu, posMu, posSigma);
+	return totalPool * (posPdf / pdfSum);
+}
+
 export function generateCurveData(
 	mu: number,
 	sigma: number,

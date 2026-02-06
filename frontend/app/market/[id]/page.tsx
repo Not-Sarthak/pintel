@@ -189,7 +189,7 @@ export default function MarketDetailPage({
 				</div>
 
 				<div className="lg:w-[35%] space-y-4">
-					<OrderBook marketAddress={marketAddress} positions={positions} onTxSuccess={refetchAll} />
+					<OrderBook marketAddress={marketAddress} positions={positions} market={market} allPositions={activePositions} onTxSuccess={refetchAll} />
 					<PositionForm
 						muRange={muRange}
 						existingPositions={activePositions}
