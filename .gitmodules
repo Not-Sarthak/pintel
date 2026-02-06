@@ -1,0 +1,6 @@
+[submodule "contracts/lib/solady"]
+	path = contracts/lib/solady
+	url = https://github.com/vectorized/solady
+[submodule "contracts/lib/prb-math"]
+	path = contracts/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
