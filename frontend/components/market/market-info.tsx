@@ -1,6 +1,6 @@
 "use client";
 
-import { Countdown } from "@/components/countdown";
+import { Countdown } from "@/components/market/countdown";
 import { formatAddress, formatUSD } from "@/lib/gaussian";
 import type { MarketData } from "@/hooks/use-market";
 import { cn } from "@/lib/utils";

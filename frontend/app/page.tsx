@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { LogoAnimation } from "@/components/logo-animation";
+import { LogoAnimation } from "@/components/layout/logo-animation";
 import { Button } from "@/components/ui/button";
 import { contentContainer } from "@/lib/grid-patterns";
 
 export default function Home() {
 	return (
 		<div className={contentContainer}>
-			<div className="flex flex-col items-center justify-center py-16 md:py-24 bg-background">
+			<div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.8, ease: "easeOut" }}
-					className="w-full max-w-xl"
+					className="w-full max-w-[18rem]"
 				>
 					<LogoAnimation className="w-full" />
 				</motion.div>
@@ -25,8 +25,7 @@ export default function Home() {
 					transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
 					className="mt-6 text-center text-sm text-muted-foreground max-w-md mx-auto leading-relaxed"
 				>
-					On-chain prediction markets powered by Gaussian distributions.
-					Place predictions with confidence intervals and earn from market accuracy.
+					Because higher precision deserves higher returns
 				</motion.p>
 
 				<motion.div

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useYellowContext } from "@/components/providers/yellow-provider";
-import { useTransferPosition } from "@/hooks/use-market";
+import { useTransferPosition, useTraderReputation } from "@/hooks/use-market";
 import { formatAddress, computePositionFairValue } from "@/lib/gaussian";
 import { cn } from "@/lib/utils";
-import type { MarketData, PositionData } from "@/hooks/use-market";
+import type { MarketData, PositionData, TraderStats } from "@/hooks/use-market";
 import type { AskOrder } from "@/lib/yellow-types";
 
 interface OrderBookProps {
@@ -25,6 +25,26 @@ function timeAgo(ts: number): string {
 	if (diff < 60) return `${Math.floor(diff)}s ago`;
 	if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
 	return `${Math.floor(diff / 3600)}h ago`;
+}
+
+function TraderBadge({ stats }: { stats: TraderStats | undefined }) {
+	if (!stats || stats.totalClaims === 0) return null;
+	const accuracy = stats.wins / stats.totalClaims;
+	const payout = Number(stats.totalPayout) / 1e18;
+	const icon = accuracy >= 0.7 ? "★" : accuracy >= 0.4 ? "◆" : "●";
+	const color = accuracy >= 0.7
+		? "text-amber-500"
+		: accuracy >= 0.4
+			? "text-blue-400"
+			: "text-muted-foreground";
+	return (
+		<span
+			className={cn("ml-0.5 text-[9px] leading-none", color)}
+			title={`${stats.wins}/${stats.totalClaims} wins (${(accuracy * 100).toFixed(0)}%) | ${payout.toFixed(0)} payout`}
+		>
+			{icon}
+		</span>
+	);
 }
 
 export function OrderBook({ marketAddress, positions = [], market, allPositions = [], onTxSuccess }: OrderBookProps) {
@@ -65,6 +85,12 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 	const fills = yellow.getFills(marketAddress);
 	const chatMessages = yellow.getChat(marketAddress);
 	const onlineTraders = yellow.getOnlineTraders(marketAddress);
+
+	const sellerAddresses = useMemo(
+		() => asks.map((a) => a.from),
+		[asks],
+	);
+	const traderStats = useTraderReputation(sellerAddresses);
 
 	const usdBalance = yellow.balances.find((b) => b.asset === "ytest.usd");
 
@@ -380,6 +406,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 									/>
 									<span className="relative text-red-500 dark:text-red-400 font-medium">
 										{askNum.toFixed(2)}
+										<TraderBadge stats={traderStats.get(ask.from.toLowerCase())} />
 									</span>
 									<span className={cn("relative text-right font-medium", fvColor)} title={fv !== null ? `Fair value: ${fv.toFixed(2)}` : "N/A"}>
 										{fv !== null ? fv.toFixed(1) : "—"}

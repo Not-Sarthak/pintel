@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { formatAddress, formatUSD } from "@/lib/gaussian";
@@ -77,9 +78,12 @@ export function PositionsTable({
 									</div>
 								</td>
 								<td className="py-2.5 pr-3">
-									<span className="font-mono text-xs">
+									<Link
+										href={`/trader/${pos.owner}`}
+										className="font-mono text-xs hover:text-lilac-600 dark:hover:text-lilac-400 transition-colors"
+									>
 										{formatAddress(pos.owner)}
-									</span>
+									</Link>
 									{isOwner && (
 										<span className="ml-1.5 text-[10px] font-medium text-lilac-600 dark:text-lilac-400">
 											YOU

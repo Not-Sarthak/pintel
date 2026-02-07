@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { MarketCard } from "@/components/market-card";
+import { MarketCard } from "@/components/market/market-card";
 import { Button } from "@/components/ui/button";
 import { usePrices } from "@/hooks/use-prices";
 import { useAllMarkets } from "@/hooks/use-market";
@@ -17,22 +17,7 @@ export default function MarketsPage() {
 	const { markets, isLoading } = useAllMarkets();
 
 	return (
-		<div className="mx-auto max-w-7xl border-x border-edge px-4 py-8 md:py-12">
-			<div className="mb-10 text-center">
-				<h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-					Distribution Prediction Markets
-				</h1>
-				<p className="mt-3 text-muted-foreground text-sm md:text-base max-w-lg mx-auto">
-					Place predictions as Gaussian distributions. Express your conviction
-					with confidence intervals and earn from market accuracy.
-				</p>
-				<div className="mt-5 flex justify-center gap-3">
-					<Button asChild>
-						<Link href="/create">Create Market</Link>
-					</Button>
-				</div>
-			</div>
-
+		<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-8 md:py-12">
 			<div className="mb-4 flex items-center gap-3">
 				<div className="flex items-center gap-2 overflow-x-auto pb-1">
 					{CATEGORIES.map((cat) => (

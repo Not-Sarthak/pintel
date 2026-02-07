@@ -1,6 +1,4 @@
-import { CrafterStationLogo } from "@/components/logos/crafter-station";
 import { GithubLogoThemeAware } from "@/components/logos/github-theme-aware";
-import { MoralejaDesignLogo } from "@/components/logos/moraleja-design";
 import { cn } from "@/lib/utils";
 
 const footerGridPattern = cn(
@@ -11,16 +9,16 @@ const footerGridPattern = cn(
 export function SiteFooter() {
 	return (
 		<footer className="max-w-screen overflow-x-hidden px-2">
-			<div className="screen-line-before mx-auto border-x border-edge pt-4 md:max-w-3xl">
-				<p className="mb-4 px-4 text-center font-mono text-xs text-muted-foreground">
-					Powered by{" "}
+			<div className="screen-line-before mx-auto border-x border-edge pt-4 min-w-6xl max-w-6xl">
+				<p className="mb-4 px-4 text-center text-xs text-muted-foreground">
+					Built during{" "}
 					<a
-						className="link"
-						href="https://vercel.com/ai-gateway"
+						className="hover:text-foreground transition-colors"
+						href="https://ethglobal.com"
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 					>
-						Vercel AI Gateway
+						ETHGlobal HackMoney
 					</a>
 				</p>
 
@@ -28,7 +26,7 @@ export function SiteFooter() {
 					<div className="mx-auto flex items-center justify-center gap-3 border-x border-edge bg-background px-4">
 						<a
 							className="flex items-center transition-colors hover:opacity-80"
-							href="https://github.com/crafter-station/pintel"
+							href="https://github.com/Not-Sarthak/pintel"
 							target="_blank"
 							rel="noopener noreferrer"
 							aria-label="GitHub"
@@ -39,25 +37,12 @@ export function SiteFooter() {
 						<Separator />
 
 						<a
-							className="flex items-center transition-colors hover:opacity-80"
-							href="https://crafterstation.com/"
+							className="flex items-center transition-colors hover:opacity-80 text-xs text-muted-foreground hover:text-foreground"
+							href="https://x.com/0xSarthak13"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<CrafterStationLogo className="size-5" />
-							<span className="sr-only">Crafter Station</span>
-						</a>
-
-						<Separator />
-
-						<a
-							className="flex items-center transition-colors hover:opacity-80"
-							href="https://moraleja.design"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							<MoralejaDesignLogo className="size-5" />
-							<span className="sr-only">Moraleja Design</span>
+							@0xSarthak13
 						</a>
 					</div>
 				</div>

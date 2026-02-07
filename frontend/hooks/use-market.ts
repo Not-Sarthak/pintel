@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
 	useReadContract,
 	useReadContracts,
@@ -582,5 +582,86 @@ export function useCreateMarket() {
 	}
 
 	return { create, isPending, isConfirming, isConfirmed, txHash: hash, error: writeError };
+}
+
+export interface TraderStats {
+	wins: number;
+	totalClaims: number;
+	totalPayout: bigint;
+}
+
+export function useTraderReputation(addresses: string[]): Map<string, TraderStats> {
+	const unique = useMemo(
+		() => [...new Set(addresses.map((a) => a.toLowerCase() as `0x${string}`))],
+		[addresses],
+	);
+
+	const contracts = useMemo(
+		() =>
+			unique.map((addr) => ({
+				address: FACTORY_ADDRESS,
+				abi: PintelMarketFactoryABI,
+				functionName: "userStats" as const,
+				args: [addr],
+			})),
+		[unique],
+	);
+
+	const { data } = useReadContracts({
+		contracts,
+		query: { enabled: unique.length > 0 },
+	});
+
+	return useMemo(() => {
+		const map = new Map<string, TraderStats>();
+		if (!data) return map;
+		for (let i = 0; i < unique.length; i++) {
+			const d = data[i];
+			if (d?.result) {
+				const r = d.result as [bigint, bigint, bigint];
+				map.set(unique[i], {
+					wins: Number(r[0]),
+					totalClaims: Number(r[1]),
+					totalPayout: r[2],
+				});
+			}
+		}
+		return map;
+	}, [data, unique]);
+}
+
+export function useTraderProfile(address: `0x${string}` | undefined) {
+	const enabled = !!address;
+
+	const { data, isLoading } = useReadContracts({
+		contracts: [
+			{
+				address: FACTORY_ADDRESS,
+				abi: PintelMarketFactoryABI,
+				functionName: "userStats",
+				args: [address!],
+			},
+			{
+				address: FACTORY_ADDRESS,
+				abi: PintelMarketFactoryABI,
+				functionName: "getMarketsByCreator",
+				args: [address!],
+			},
+		],
+		query: { enabled },
+	});
+
+	const stats: TraderStats | null = useMemo(() => {
+		if (!data?.[0]?.result) return null;
+		const r = data[0].result as [bigint, bigint, bigint];
+		return { wins: Number(r[0]), totalClaims: Number(r[1]), totalPayout: r[2] };
+	}, [data]);
+
+	const createdMarkets: string[] = useMemo(() => {
+		if (!data?.[1]?.result) return [];
+		return data[1].result as string[];
+	}, [data]);
+
+	return { stats, createdMarkets, isLoading };
 }
 

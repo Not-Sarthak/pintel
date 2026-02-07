@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MiniDistributionChart } from "@/components/distribution-chart";
+import { MiniDistributionChart } from "@/components/market/distribution-chart";
 import { formatUSD } from "@/lib/gaussian";
 import { useMarket, useMarketPositions, useMarketENS } from "@/hooks/use-market";
 import { useYellowContext } from "@/components/providers/yellow-provider";

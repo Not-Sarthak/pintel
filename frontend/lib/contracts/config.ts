@@ -6,11 +6,11 @@ import _PintelMarketABI from "./PintelMarket.json";
 import _PintelMarketFactoryABI from "./PintelMarketFactory.json";
 
 export const FACTORY_ADDRESS =
-	"0xFe0bEcca9014A9564A87D7d350880C44855826E7" as `0x${string}`;
+	"0xE41D71CE0F5C2A26946eE999C33B5a523F151759" as `0x${string}`;
 export const COLLATERAL_TOKEN =
-	"0x7443EB62Baa26fcd6033d4bD3D7d4A3789F2d137" as `0x${string}`;
+	"0xEb2927E0274d4A1D52685610bf256468b79EEa4d" as `0x${string}`;
 
-export const FACTORY_DEPLOY_BLOCK = BigInt(10203972);
+export const FACTORY_DEPLOY_BLOCK = BigInt(10212392);
 
 export const PintelMarketABI = _PintelMarketABI as unknown as Abi;
 export const PintelMarketFactoryABI = _PintelMarketFactoryABI as unknown as Abi;

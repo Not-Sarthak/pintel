@@ -144,7 +144,7 @@ export default function CreateMarketPage() {
 					: "Create Market";
 
 	return (
-		<div className="mx-auto max-w-2xl border-x border-edge px-4 py-8 md:py-12">
+		<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-8 md:py-12">
 			<div className="mb-8">
 				<h1 className="text-2xl font-bold tracking-tight text-foreground">
 					Create Market

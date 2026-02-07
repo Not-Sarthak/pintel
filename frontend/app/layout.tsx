@@ -2,9 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Web3Provider } from "@/components/providers/web3-provider";
 import { YellowProvider } from "@/components/providers/yellow-provider";
-import { GithubBadge } from "@/components/github-badge";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeScript } from "@/components/theme/theme-script";
 import { Toaster } from "sonner";
 import { diagonalGridPattern } from "@/lib/grid-patterns";
@@ -44,8 +43,8 @@ export const metadata: Metadata = {
 
 function MainContent({ children }: { children: React.ReactNode }) {
 	return (
-		<main className="max-w-screen overflow-x-hidden px-2">
-			<div className={diagonalGridPattern}>{children}</div>
+		<main className="flex min-h-screen max-w-screen flex-col overflow-x-hidden px-2">
+			<div className={`${diagonalGridPattern} flex-1 grid`}>{children}</div>
 		</main>
 	);
 }
@@ -56,7 +55,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
 			<SiteHeader />
 			<MainContent>{children}</MainContent>
 			<SiteFooter />
-			<GithubBadge />
 		</>
 	);
 }

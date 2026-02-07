@@ -1,12 +1,12 @@
 "use client";
 
 import { use, useCallback } from "react";
-import { ActivityFeed } from "@/components/activity-feed";
-import { DistributionChart } from "@/components/distribution-chart";
-import { MarketInfo } from "@/components/market-info";
-import { PositionForm } from "@/components/position-form";
-import { PositionsTable } from "@/components/positions-table";
-import { OrderBook } from "@/components/order-book";
+import { ActivityFeed } from "@/components/market/activity-feed";
+import { DistributionChart } from "@/components/market/distribution-chart";
+import { MarketInfo } from "@/components/market/market-info";
+import { PositionForm } from "@/components/market/position-form";
+import { PositionsTable } from "@/components/market/positions-table";
+import { OrderBook } from "@/components/market/order-book";
 import { useYellowContext } from "@/components/providers/yellow-provider";
 import { usePrices } from "@/hooks/use-prices";
 import {
@@ -52,7 +52,7 @@ export default function MarketDetailPage({
 
 	if (isLoading) {
 		return (
-			<div className="mx-auto max-w-7xl border-x border-edge px-4 py-6 md:py-8">
+			<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-6 md:py-8">
 				<div className="animate-pulse space-y-6">
 					<div className="h-6 w-48 rounded bg-muted" />
 					<div className="h-8 w-full rounded bg-muted" />
@@ -64,7 +64,7 @@ export default function MarketDetailPage({
 
 	if (!market) {
 		return (
-			<div className="mx-auto max-w-7xl border-x border-edge px-4 py-16 text-center">
+			<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-16 text-center">
 				<h1 className="text-xl font-semibold text-foreground mb-2">
 					Market Not Found
 				</h1>
@@ -109,7 +109,7 @@ export default function MarketDetailPage({
 			: defaultRange();
 
 	return (
-		<div className="mx-auto max-w-7xl border-x border-edge px-4 py-6 md:py-8">
+		<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-6 md:py-8">
 			<div className="mb-6">
 				<div className="flex items-center gap-2 mb-2">
 					<span className="inline-flex items-center rounded-md bg-lilac-100 px-2 py-0.5 text-xs font-medium text-lilac-700 dark:bg-lilac-900/40 dark:text-lilac-300">

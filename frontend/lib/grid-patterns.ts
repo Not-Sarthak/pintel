@@ -7,4 +7,4 @@ export const diagonalGridPattern = cn(
 );
 
 export const contentContainer =
-	"mx-auto border-x border-edge w-full px-2 md:max-w-3xl";
+	"mx-auto border-x border-edge w-full px-2 min-w-6xl max-w-6xl";
