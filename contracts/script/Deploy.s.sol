@@ -8,14 +8,11 @@ import { ChainlinkResolver } from "../src/ChainlinkResolver.sol";
 import { MockERC20 } from "../test/mocks/MockERC20.sol";
 
 contract Deploy is Script {
-    // Sepolia ENS
     address constant ENS_REGISTRY = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e;
     address constant PUBLIC_RESOLVER = 0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5;
 
-    // namehash("pintel.eth")
     bytes32 constant PARENT_NODE = 0xffa860d61690ce3f3168d982722c462085234324cbd83f5c8f7acc50a7263e9c;
 
-    // Chainlink Sepolia feeds
     address constant BTC_FEED = 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43;
     address constant ETH_FEED = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
 
@@ -23,11 +20,9 @@ contract Deploy is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        // 1. Deploy market implementation
         PintelMarket marketImpl = new PintelMarket();
         console.log("PintelMarket impl:", address(marketImpl));
 
-        // 2. Deploy factory
         PintelMarketFactory factory = new PintelMarketFactory(
             ENS_REGISTRY,
             PUBLIC_RESOLVER,
@@ -36,15 +31,12 @@ contract Deploy is Script {
         );
         console.log("PintelMarketFactory:", address(factory));
 
-        // 3. Deploy ChainlinkResolver
         ChainlinkResolver resolver = new ChainlinkResolver();
         console.log("ChainlinkResolver:", address(resolver));
 
-        // 4. Deploy test token for collateral
         MockERC20 token = new MockERC20();
         console.log("MockERC20 (collateral):", address(token));
 
-        // 5. Mint tokens to deployer
         address deployer = vm.addr(deployerKey);
         token.mint(deployer, 1_000_000e18);
         console.log("Minted 1M tokens to deployer");

@@ -2,7 +2,7 @@
 
 import { MoonStarIcon, SunIcon } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 
 export function ToggleTheme() {
 	const { mounted, isDark, toggleMode } = useTheme();

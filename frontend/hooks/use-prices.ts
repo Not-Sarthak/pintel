@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import {
 	type PriceData,
-	type TradeData,
 	subscribePrices,
-	subscribeTrades,
 } from "@/lib/prices";
 
 export function usePrices() {
@@ -27,15 +25,3 @@ export function usePrice(symbol: string | null) {
 	return prices.get(symbol) || null;
 }
 
-export function useLiveTrades(maxTrades = 50) {
-	const [trades, setTrades] = useState<TradeData[]>([]);
-
-	useEffect(() => {
-		const unsub = subscribeTrades((trade) => {
-			setTrades((prev) => [trade, ...prev].slice(0, maxTrades));
-		});
-		return unsub;
-	}, [maxTrades]);
-
-	return trades;
-}

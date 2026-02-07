@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Countdown } from "@/components/countdown";
 import { MiniDistributionChart } from "@/components/distribution-chart";
 import { formatUSD } from "@/lib/gaussian";
 import { useMarket, useMarketPositions, useMarketENS } from "@/hooks/use-market";

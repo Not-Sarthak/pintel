@@ -20,26 +20,23 @@ import type {
 	OrderMessage,
 } from "@/lib/yellow-types";
 
-export interface LedgerBalance {
+interface LedgerBalance {
 	asset: string;
 	amount: string;
 }
 
 interface YellowContextValue {
-	// Connection state
 	isConnected: boolean;
 	isAuthenticated: boolean;
 	isConnecting: boolean;
 	balances: LedgerBalance[];
 	error: string | null;
 
-	// Per-market state
 	getAsks: (market: string) => AskOrder[];
 	getFills: (market: string) => FillEvent[];
 	getChat: (market: string) => ChatMessage[];
 	getOnlineTraders: (market: string) => string[];
 
-	// Actions
 	joinMarket: (marketAddress: string) => Promise<void>;
 	leaveMarket: (marketAddress: string) => void;
 	postAsk: (marketAddress: string, ask: Omit<AskOrder, "from" | "ts">) => Promise<void>;
@@ -60,7 +57,6 @@ export function useYellowContext() {
 	return ctx;
 }
 
-// Heartbeat timeout: if no heartbeat in 30s, consider offline
 const HEARTBEAT_TIMEOUT = 30_000;
 
 export function YellowProvider({ children }: { children: ReactNode }) {
@@ -74,38 +70,28 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 	const [balances, setBalances] = useState<LedgerBalance[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
-	// Per-market state using Maps (key = marketAddress lowercase)
 	const [asksByMarket, setAsksByMarket] = useState<Map<string, AskOrder[]>>(new Map());
 	const [fillsByMarket, setFillsByMarket] = useState<Map<string, FillEvent[]>>(new Map());
 	const [chatByMarket, setChatByMarket] = useState<Map<string, ChatMessage[]>>(new Map());
-	// Heartbeat tracking: market -> { address -> lastSeen }
 	const heartbeatMap = useRef<Map<string, Map<string, number>>>(new Map());
 	const [onlineByMarket, setOnlineByMarket] = useState<Map<string, string[]>>(new Map());
 
-	// Track filled position IDs — prevents sync from re-adding asks for filled positions
 	const filledPositionIds = useRef<Set<number>>(new Set());
 
-	// Track which markets user has joined
 	const joinedMarketsRef = useRef<Set<string>>(new Set());
 
-	// Auto-reconnect tracking
 	const reconnectAttemptRef = useRef(0);
 	const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Sync interval: broadcasts full order book state every 10s
 	const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-	// Session discovery interval: polls get_app_sessions every 10s
 	const discoveryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-	// Ref to latest asks/chat so sync can access without stale closures
 	const asksByMarketRef = useRef(asksByMarket);
 	asksByMarketRef.current = asksByMarket;
 	const chatByMarketRef = useRef(chatByMarket);
 	chatByMarketRef.current = chatByMarket;
 
-	// Stable ref for the session message handler (avoids dependency ordering issues)
 	const handleSessionMessageRef = useRef<(data: unknown) => void>(() => {});
 
-	// Recalculate online traders periodically
 	useEffect(() => {
 		const interval = setInterval(() => {
 			const now = Date.now();
@@ -124,7 +110,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		return () => clearInterval(interval);
 	}, []);
 
-	// Lazy connect
 	const connectPromiseRef = useRef<Promise<void> | null>(null);
 
 	const ensureConnected = useCallback(async () => {
@@ -272,7 +257,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		return connectPromiseRef.current;
 	}, [walletClient]);
 
-	// Disconnect when wallet disconnects
 	useEffect(() => {
 		if (!account && channelRef.current) {
 			if (reconnectTimerRef.current) {
@@ -303,7 +287,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		}
 	}, [account]);
 
-	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
 			if (reconnectTimerRef.current) {
@@ -323,7 +306,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		const msg = data as OrderMessage & { type: string };
 		if (!msg?.type) return;
 
-		// Determine target market from sync message, or fall back to all
 		const markets = msg.type === "sync" && (msg as { market?: string }).market
 			? [(msg as { market: string }).market.toLowerCase()]
 			: Array.from(joinedMarketsRef.current);
@@ -331,7 +313,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		switch (msg.type) {
 			case "ask": {
 				const ask = msg as unknown as AskOrder & { type: string };
-				// Don't add asks for positions that have been filled
 				if (filledPositionIds.current.has(ask.positionId)) break;
 				for (const market of markets) {
 					setAsksByMarket((prev) => {
@@ -360,9 +341,7 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 			}
 			case "fill": {
 				const fill = msg as unknown as FillEvent & { type: string };
-				// Already processed this fill? Skip entirely to avoid loops
 				if (filledPositionIds.current.has(fill.positionId)) break;
-				// Record this position as filled — prevents sync from re-adding the ask
 				filledPositionIds.current.add(fill.positionId);
 				for (const market of markets) {
 					setAsksByMarket((prev) => {
@@ -419,7 +398,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 					market: sync.market ?? "all",
 				});
 
-				// Update heartbeat
 				for (const market of markets) {
 					if (!heartbeatMap.current.has(market)) {
 						heartbeatMap.current.set(market, new Map());
@@ -427,8 +405,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 					heartbeatMap.current.get(market)!.set(senderAddr, Date.now());
 				}
 
-				// Replace all asks from this sender with the synced asks
-				// but exclude any positions we know have been filled
 				for (const market of markets) {
 					setAsksByMarket((prev) => {
 						const next = new Map(prev);
@@ -453,7 +429,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 					});
 				}
 
-				// Merge chat
 				if (sync.chat?.length) {
 					for (const market of markets) {
 						setChatByMarket((prev) => {
@@ -486,7 +461,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 
 		if (!channelRef.current) return;
 
-		// Initialize market state
 		if (!heartbeatMap.current.has(key)) {
 			heartbeatMap.current.set(key, new Map());
 		}
@@ -498,7 +472,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 			console.error("[YellowProvider] Failed to join market:", err);
 		}
 
-		// Start periodic sync (broadcasts state every 10s)
 		if (!syncIntervalRef.current) {
 			const broadcastSync = async () => {
 				if (!channelRef.current) return;
@@ -517,7 +490,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 							market,
 						});
 					} catch {
-						// Silently ignore sync failures
 					}
 				}
 			};
@@ -525,12 +497,10 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 			syncIntervalRef.current = setInterval(broadcastSync, 10_000);
 		}
 
-		// Start periodic session discovery (finds other users → creates bilateral sessions)
 		if (!discoveryIntervalRef.current) {
 			const discoverSessions = () => {
 				channelRef.current?.getAppSessions();
 			};
-			// First poll after a short delay (give own session time to be created)
 			setTimeout(discoverSessions, 2000);
 			discoveryIntervalRef.current = setInterval(discoverSessions, 10_000);
 		}
@@ -611,7 +581,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 		const key = marketAddress.toLowerCase();
 		const ts = Date.now();
 		const fullFill: FillEvent = { ...fill, ts };
-		// Record as filled — prevents this position from reappearing via sync
 		filledPositionIds.current.add(fill.positionId);
 		setAsksByMarket((prev) => {
 			const next = new Map(prev);
@@ -626,8 +595,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 			next.set(key, [fullFill, ...existing].slice(0, 50));
 			return next;
 		});
-		// Broadcast fill event to the other party (seller needs it for auto-transfer).
-		// Self-echo is safe: filledPositionIds dedup prevents re-processing.
 		await channelRef.current.broadcastToMarket(key, {
 			type: "fill" as const,
 			positionId: fill.positionId,

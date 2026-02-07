@@ -5,7 +5,7 @@ import { YellowProvider } from "@/components/providers/yellow-provider";
 import { GithubBadge } from "@/components/github-badge";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { ThemeScript } from "@/components/theme-script";
+import { ThemeScript } from "@/components/theme/theme-script";
 import { Toaster } from "sonner";
 import { diagonalGridPattern } from "@/lib/grid-patterns";
 import "./globals.css";

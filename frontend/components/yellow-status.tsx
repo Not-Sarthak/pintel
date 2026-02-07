@@ -7,7 +7,6 @@ export function YellowStatus() {
 	const { address } = useAccount();
 	const { isConnected, isAuthenticated, isConnecting, balances } = useYellowContext();
 
-	// Don't show anything if no wallet connected
 	if (!address) return null;
 
 	const usdBalance = balances.find((b) => b.asset === "ytest.usd");

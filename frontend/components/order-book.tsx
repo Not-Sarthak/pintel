@@ -47,23 +47,20 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 	const [refreshing, setRefreshing] = useState(false);
 	const chatEndRef = useRef<HTMLDivElement>(null);
 
-	// Tick every 5s to expire old fills from display
 	const [, setTick] = useState(0);
 	useEffect(() => {
 		const t = setInterval(() => setTick((c) => c + 1), 5_000);
 		return () => clearInterval(t);
 	}, []);
 
-	// Only join market session when user clicks "Enable Yellow"
 	useEffect(() => {
 		if (!enabled || !account) return;
 		yellow.joinMarket(marketAddress);
 		return () => {
 			yellow.leaveMarket(marketAddress);
 		};
-	}, [enabled, account, marketAddress]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [enabled, account, marketAddress]);
 
-	// Get market-scoped state
 	const asks = yellow.getAsks(marketAddress);
 	const fills = yellow.getFills(marketAddress);
 	const chatMessages = yellow.getChat(marketAddress);
@@ -76,7 +73,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 	);
 	const selectedPosition = myPositions.find((p) => p.id === sellPositionId);
 
-	// Fair value computation helper
 	const totalPoolNum = market ? Number(market.totalPool) / 1e18 : 0;
 	const aggMu = market?.aggMu ?? 0;
 	const canComputeFV = allPositions.length > 0 && totalPoolNum > 0;
@@ -91,18 +87,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 
 	const selectedFV = selectedPosition ? getFairValue(selectedPosition.mu, selectedPosition.sigma) : null;
 
-	// All asks sorted by price descending (highest at top like exchange)
 	const allAsks = [...asks].sort((a, b) => Number(b.price) - Number(a.price));
-	// Incoming asks only (for buy buttons)
-	const incomingAsks = asks.filter(
-		(a) => account && a.from.toLowerCase() !== account.toLowerCase(),
-	);
-	// My asks
-	const myAsks = asks.filter(
-		(a) => account && a.from.toLowerCase() === account.toLowerCase(),
-	);
-
-	// Track pending auto-transfers
 	const pendingTransfers = useRef<Map<number, string>>(new Map());
 
 	useEffect(() => {
@@ -113,14 +98,12 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 		}
 	}, [isTransferConfirmed, onTxSuccess]);
 
-	// Also clear fills immediately when on-chain transfer is confirmed (seller side)
 	useEffect(() => {
 		if (isTransferConfirmed) {
-			setTick((c) => c + 1); // force re-render to drop expired fills
+			setTick((c) => c + 1);
 		}
 	}, [isTransferConfirmed]);
 
-	// Auto-suggest fair value as default ask price when position is selected
 	useEffect(() => {
 		if (selectedFV !== null && sellPositionId !== null) {
 			setAskPrice(selectedFV.toFixed(2));
@@ -172,7 +155,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 		}
 	}, [yellow, marketAddress, account]);
 
-	// Auto-transfer on fill
 	useEffect(() => {
 		if (!account) return;
 		for (const fill of fills) {
@@ -227,20 +209,16 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 		}
 	};
 
-	// Compute cumulative totals for depth bars
 	const asksCumulative = (() => {
-		// Sort ascending for cumulative (bottom ask = smallest price, top = largest)
 		const sorted = [...allAsks].sort((a, b) => Number(a.price) - Number(b.price));
 		let total = 0;
 		const result = sorted.map((a) => {
 			total += Number(a.collateral);
 			return { ...a, cumTotal: total };
 		});
-		// Reverse back to descending for display
 		return result.reverse();
 	})();
 
-	// Only show fills from the last 30s in the green rows; older ones auto-expire
 	const FILL_DISPLAY_MS = 30_000;
 	const recentFills = fills.filter((f) => Date.now() - f.ts < FILL_DISPLAY_MS);
 
@@ -256,7 +234,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 	const maxAskTotal = asksCumulative.length > 0 ? Math.max(...asksCumulative.map((a) => a.cumTotal)) : 1;
 	const maxFillTotal = fillsCumulative.length > 0 ? Math.max(...fillsCumulative.map((f) => f.cumTotal)) : 1;
 
-	// ── NOT ENABLED: show "Enable Yellow" button ──
 	if (!account) {
 		return (
 			<div className="rounded-lg border border-border bg-card p-4">
@@ -325,10 +302,8 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 		);
 	}
 
-	// ── MAIN ORDER BOOK ──
 	return (
 		<div className="rounded-lg border border-border bg-card overflow-hidden">
-			{/* Header */}
 			<div className="flex items-center justify-between p-3 border-b border-border">
 				<div className="flex items-center gap-2">
 					<span className="relative flex h-2 w-2">
@@ -368,9 +343,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 				</div>
 			</div>
 
-			{/* ── EXCHANGE-STYLE ORDER BOOK ── */}
 			<div className="font-mono text-[11px]">
-				{/* Column headers */}
 				<div className="grid grid-cols-5 px-3 py-1.5 text-[10px] text-muted-foreground border-b border-border/50">
 					<span>Price</span>
 					<span className="text-right">FV</span>
@@ -379,7 +352,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					<span className="text-right">Action</span>
 				</div>
 
-				{/* ASKS (sell side) — red, sorted price descending */}
 				<div className="relative">
 					{asksCumulative.length === 0 ? (
 						<div className="px-3 py-4 text-center text-[10px] text-muted-foreground">
@@ -392,7 +364,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 							const canBuy = !isOwn;
 							const fv = getFairValue(ask.mu, ask.sigma);
 							const askNum = Number(ask.price);
-							// Color: green if ask <= FV (good deal), red if ask > 1.5x FV (overpriced)
 							const fvColor = fv !== null
 								? askNum <= fv ? "text-emerald-500 dark:text-emerald-400"
 								: askNum > fv * 1.5 ? "text-red-500 dark:text-red-400"
@@ -403,7 +374,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 									key={`${ask.positionId}-${ask.from}-${ask.ts}`}
 									className="relative grid grid-cols-5 items-center px-3 py-1 hover:bg-red-500/5 transition-colors group"
 								>
-									{/* Depth bar */}
 									<div
 										className="absolute right-0 top-0 bottom-0 bg-red-500/10 dark:bg-red-500/15 pointer-events-none"
 										style={{ width: `${depthPct}%` }}
@@ -440,7 +410,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					)}
 				</div>
 
-				{/* ── SPREAD / MID ── */}
 				<div className="px-3 py-1.5 border-y border-border/50 flex items-center gap-2">
 					{fills.length > 0 ? (
 						<>
@@ -465,7 +434,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					)}
 				</div>
 
-				{/* RECENT FILLS (buy side) — green, most recent first */}
 				<div className="relative">
 					{fillsCumulative.length === 0 ? (
 						<div className="px-3 py-4 text-center text-[10px] text-muted-foreground">
@@ -505,9 +473,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 				</div>
 			</div>
 
-			{/* ── ACTIONS BELOW BOOK ── */}
 			<div className="border-t border-border p-3 space-y-3">
-				{/* Post Ask — only show if user has positions */}
 				{myPositions.length > 0 && (
 					<div className="space-y-2">
 						<p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -571,7 +537,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					</div>
 				)}
 
-				{/* Auto-transfer indicator */}
 				{(isTransferring || isTransferConfirming) && (
 					<div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-2 flex items-center gap-2">
 						<span className="relative flex h-2 w-2">
@@ -584,7 +549,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					</div>
 				)}
 
-				{/* Chat */}
 				<div className="space-y-1.5">
 					<p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
 						Chat
@@ -618,7 +582,6 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 					</form>
 				</div>
 
-				{/* Get tokens */}
 				<Button onClick={handleFaucet} disabled={faucetLoading} size="sm" variant="ghost" className="w-full text-[10px] h-6">
 					{faucetLoading ? "Requesting..." : "+ Get Test Tokens"}
 				</Button>

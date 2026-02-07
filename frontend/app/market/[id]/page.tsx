@@ -35,7 +35,7 @@ export default function MarketDetailPage({
 	const marketAddress = id as `0x${string}`;
 	const prices = usePrices();
 	const { market, isLoading, refetch } = useMarket(marketAddress);
-	const { positions, isLoading: positionsLoading, refetch: refetchPositions } = useMarketPositions(
+	const { positions, refetch: refetchPositions } = useMarketPositions(
 		marketAddress,
 		market?.positionCount ?? 0,
 	);
@@ -47,7 +47,6 @@ export default function MarketDetailPage({
 
 	const refetchAll = useCallback(async () => {
 		await refetch();
-		// Small delay so on-chain state has propagated
 		setTimeout(() => refetchPositions(), 1500);
 	}, [refetch, refetchPositions]);
 
@@ -168,7 +167,6 @@ export default function MarketDetailPage({
 							positions={positions}
 							resolved={market.resolved}
 							marketAddress={marketAddress}
-							onTxSuccess={refetchAll}
 						/>
 					</div>
 

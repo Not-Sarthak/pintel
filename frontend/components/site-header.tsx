@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ConnectKitButton } from "connectkit";
 import { PintelLogoThemeAware } from "@/components/logos/pintel-theme-aware";
-import { ToggleTheme } from "@/components/toggle-theme";
+import { ToggleTheme } from "@/components/theme/toggle-theme";
 import { YellowStatus } from "@/components/yellow-status";
 import { cn } from "@/lib/utils";
 import { SiteHeaderWrapper } from "./site-header-wrapper";

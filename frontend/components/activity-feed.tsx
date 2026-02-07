@@ -5,7 +5,7 @@ import type { ActivityEvent } from "@/hooks/use-market";
 import { cn } from "@/lib/utils";
 import type { AskOrder, FillEvent } from "@/lib/yellow-types";
 
-export interface YellowActivityEvent {
+interface YellowActivityEvent {
 	id: string;
 	source: "yellow";
 	type: "ask" | "fill" | "listed";
@@ -89,7 +89,6 @@ function ActivityIcon({ type, source }: { type: string; source: "chain" | "yello
 }
 
 export function ActivityFeed({ activities, yellowAsks = [], yellowFills = [] }: ActivityFeedProps) {
-	// Merge on-chain and Yellow events into a unified timeline
 	const chainEvents: CombinedEvent[] = activities.map((a) => ({ ...a, source: "chain" as const }));
 
 	const yellowEvents: YellowActivityEvent[] = [

@@ -13,14 +13,6 @@ type ThemeContextValue = {
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
-export function useThemeContext(): ThemeContextValue {
-	const context = React.useContext(ThemeContext);
-	if (!context) {
-		throw new Error("useThemeContext must be used within a ThemeProvider");
-	}
-	return context;
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const store = useThemeStore();
 

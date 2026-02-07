@@ -164,7 +164,6 @@
   --edge: color-mix(in oklab, var(--border) 96%, var(--background));
 }
 
-/* View Transition animations for smooth theme switching */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

@@ -5,7 +5,6 @@ import {
 	createCloseAppSessionMessage,
 	createSubmitAppStateMessage,
 	createGetAppSessionsMessageV2,
-	createGetChannelsMessageV2,
 	createGetLedgerBalancesMessage,
 	createTransferMessage,
 	createECDSAMessageSigner,
@@ -18,26 +17,13 @@ import type { OrderMessage } from "./yellow-types";
 
 const CLEARNODE_WS = "wss://clearnet-sandbox.yellow.com/ws";
 
-export interface YellowConfig {
+interface YellowConfig {
 	walletAddress: Address;
 	walletClient: WalletClient;
 }
 
-export type YellowMessageHandler = (method: string, data: unknown) => void;
+type YellowMessageHandler = (method: string, data: unknown) => void;
 
-/**
- * One-way bilateral session model:
- *
- * 1. Each user creates a [self, 0x0] session per market (for discovery via get_app_sessions)
- * 2. When discovering another user, creates an OUTBOUND [self, other] bilateral session
- * 3. Only the SESSION CREATOR submits state to outbound sessions
- * 4. ClearNode delivers ASU notifications to ALL participants (including the remote user)
- * 5. The remote user receives our messages via ASU without needing to submit to our session
- * 6. For the reverse direction, the remote user creates their own [them, us] outbound session
- *
- * Key insight: addresses must be EIP-55 checksummed for ClearNode's
- * allocation validation (case-sensitive) and notification delivery to work.
- */
 export class YellowChannel {
 	private ws: WebSocket | null = null;
 	private walletAddress: Address;
@@ -55,28 +41,18 @@ export class YellowChannel {
 	private authenticated = false;
 	private intentionalClose = false;
 
-	// Own [self, 0x0] session per market: marketAddr → sessionId
 	private marketSessions = new Map<string, string>();
-	// Reverse: sessionId → marketAddr
 	private sessionToMarket = new Map<string, string>();
-	// Pending market joins: nonce → marketAddr
 	private pendingJoins = new Map<number, string>();
 
-	// Bilateral sessions: remoteAddr(lower) → sessionId
 	private bilateralSessions = new Map<string, string>();
-	// Track which bilateral sessions WE created (outbound) — only submit to these
 	private bilateralCreatedByUs = new Set<string>();
-	// Pending bilateral session creates: nonce → remoteAddr(lower)
 	private pendingBilateral = new Map<number, string>();
-	// Track which remote addresses we've attempted bilateral with
 	private bilateralAttempted = new Set<string>();
 
-	// Discovered remote users from get_app_sessions: remoteAddr(lower) → Set of session IDs
 	private remoteUsers = new Map<string, Set<string>>();
-	// Our own session IDs (so we don't treat them as remote)
 	private ownSessionIds = new Set<string>();
 
-	// Dedup: track sessionData hashes we've already processed (avoid re-processing on poll)
 	private processedSessionData = new Set<string>();
 
 	constructor(config: YellowConfig) {
@@ -103,14 +79,6 @@ export class YellowChannel {
 
 	get isAuthenticated() {
 		return this.authenticated;
-	}
-
-	getMarketSessionId(marketAddress: string): string | undefined {
-		return this.marketSessions.get(marketAddress.toLowerCase());
-	}
-
-	getRemoteSessionCount(): number {
-		return this.bilateralSessions.size;
 	}
 
 	private send(msg: string) {
@@ -240,15 +208,6 @@ export class YellowChannel {
 		this.send(msg);
 	}
 
-	async getChannels(): Promise<void> {
-		if (!this.ws) return;
-		const msg = createGetChannelsMessageV2(
-			this.walletAddress,
-			"open" as Parameters<typeof createGetChannelsMessageV2>[1],
-		);
-		this.send(msg);
-	}
-
 	async getAppSessions(): Promise<void> {
 		if (!this.ws) return;
 		const msg = createGetAppSessionsMessageV2(
@@ -258,8 +217,6 @@ export class YellowChannel {
 		this.send(msg);
 	}
 
-	// ── Checksum helper ──
-
 	private checksumAddress(addr: string): Address {
 		try {
 			return getAddress(addr);
@@ -267,8 +224,6 @@ export class YellowChannel {
 			return addr as Address;
 		}
 	}
-
-	// ── Market Session Management ──
 
 	async joinMarketSession(marketAddress: string): Promise<void> {
 		if (!this.ws) throw new Error("Not connected");
@@ -309,15 +264,6 @@ export class YellowChannel {
 		this.send(msg);
 	}
 
-	/**
-	 * Create an OUTBOUND bilateral [self, remote] session.
-	 * Only WE submit state to this session.
-	 * ClearNode delivers ASU to the remote user automatically.
-	 *
-	 * Uses checksummed addresses for both participants to ensure
-	 * ClearNode's case-sensitive allocation validation works and
-	 * ASU notifications reach the remote user.
-	 */
 	async createBilateralSession(remoteAddress: string): Promise<void> {
 		if (!this.ws) return;
 		const remote = remoteAddress.toLowerCase();
@@ -327,7 +273,6 @@ export class YellowChannel {
 		}
 		this.bilateralAttempted.add(remote);
 
-		// Checksum the remote address for proper ClearNode matching
 		const remoteChecksummed = this.checksumAddress(remoteAddress);
 
 		const nonce = Date.now() + Math.floor(Math.random() * 1000);
@@ -365,19 +310,11 @@ export class YellowChannel {
 		}
 	}
 
-	/**
-	 * Broadcast by submitting state to own [self, 0x0] session
-	 * and all OUTBOUND bilateral sessions (sessions we created).
-	 *
-	 * We do NOT submit to adopted/inbound sessions — the other
-	 * user receives our messages via ASU from our outbound sessions.
-	 */
 	async broadcastToMarket(marketAddress: string, message: OrderMessage): Promise<void> {
 		if (!this.ws) throw new Error("Not connected");
 		const key = marketAddress.toLowerCase();
 		const sessionData = JSON.stringify(message);
 
-		// 1. Submit to own [self, 0x0] session (for persistence/discovery)
 		const ownSid = this.marketSessions.get(key);
 		if (ownSid) {
 			try {
@@ -395,9 +332,7 @@ export class YellowChannel {
 			}
 		}
 
-		// 2. Submit to OUTBOUND bilateral sessions only (sessions we created)
 		for (const [remoteAddrLower, sid] of this.bilateralSessions) {
-			// Only submit to sessions WE created
 			if (!this.bilateralCreatedByUs.has(sid)) continue;
 
 			try {
@@ -412,7 +347,6 @@ export class YellowChannel {
 				});
 				this.send(msg);
 			} catch (err) {
-				// Ignore construction errors
 			}
 		}
 	}
@@ -504,24 +438,17 @@ export class YellowChannel {
 				this.onMessage?.("balance_update", data);
 				break;
 			case "create_app_session": {
-				// Response data may be wrapped in array: [{...}] or flat: {...}
 				const rawCreated = Array.isArray(data) ? (data as unknown[])[0] : data;
 				const created = rawCreated as Record<string, unknown>;
 				const sid = (created?.app_session_id ?? created?.appSessionId) as string | undefined;
 				console.log("[Yellow] create_app_session response:", { sid: sid?.slice(0, 10), nonce: created?.nonce, participants: created?.participants, pendingBilateral: this.pendingBilateral.size, pendingJoins: this.pendingJoins.size, isArray: Array.isArray(data) });
 				if (!sid) break;
 
-				// Nonce may come as string or number — try both
 				const rawNonce = created?.nonce;
 				const nonceNum = typeof rawNonce === "string" ? Number(rawNonce) : (rawNonce as number ?? 0);
 
-				// ── 1. Try to match as bilateral session ──
-
-				// Try nonce match first
 				let bilateralRemote = this.pendingBilateral.get(nonceNum);
 
-				// Fallback: response lacks nonce/participants, so match by what's pending.
-				// If no pending market joins but we have pending bilateral, it must be bilateral.
 				if (!bilateralRemote && this.pendingBilateral.size > 0 && this.pendingJoins.size === 0) {
 					const entry = this.pendingBilateral.entries().next().value as [number, string];
 					bilateralRemote = entry[1];
@@ -532,10 +459,8 @@ export class YellowChannel {
 				}
 
 				if (bilateralRemote) {
-					// Handle "out:" prefix from createOutboundOnly
 					const isOutboundOnly = bilateralRemote.startsWith("out:");
 					const actualRemote = isOutboundOnly ? bilateralRemote.slice(4) : bilateralRemote;
-					// Store as outbound — overwrites inbound entry if exists
 					this.bilateralSessions.set(actualRemote, sid);
 					this.bilateralCreatedByUs.add(sid);
 					this.ownSessionIds.add(sid);
@@ -544,13 +469,10 @@ export class YellowChannel {
 					break;
 				}
 
-				// ── 2. Try to match as market [self, 0x0] session ──
-
 				let marketKey = this.pendingJoins.get(nonceNum);
 				if (marketKey) {
 					this.pendingJoins.delete(nonceNum);
 				} else {
-					// Fallback: assign to first pending market without a session
 					for (const [n, mk] of this.pendingJoins) {
 						if (!this.marketSessions.has(mk)) {
 							this.pendingJoins.delete(n);
@@ -585,36 +507,29 @@ export class YellowChannel {
 					const sid = (s.appSessionId ?? s.app_session_id) as string | undefined;
 					if (!sid || app !== "pintel") continue;
 
-					// Skip sessions we already know about
 					if (this.ownSessionIds.has(sid)) continue;
 
 					const participants = (s.participants ?? []) as string[];
 
-					// Find the non-zero, non-us participant
 					const otherParticipant = participants.find(
 						(p) =>
 							p.toLowerCase() !== myAddr &&
 							p.toLowerCase() !== "0x0000000000000000000000000000000000000000",
 					);
 
-					// Check if WE are a participant (case-insensitive)
 					const weAreParticipant = participants.some(
 						(p) => p.toLowerCase() === myAddr,
 					);
 
 					if (weAreParticipant && otherParticipant) {
-						// Bilateral session where we're a participant
-						// This was created by the OTHER user (inbound for us)
 						const otherKey = otherParticipant.toLowerCase();
 
 						if (!this.bilateralSessions.has(otherKey)) {
 							this.bilateralSessions.set(otherKey, sid);
 							this.ownSessionIds.add(sid);
-							// NOT added to bilateralCreatedByUs — this is inbound
 							console.log("[Yellow] Adopted inbound bilateral session from:", otherKey.slice(0, 10), "sid:", sid.slice(0, 10));
 						}
 
-						// Read sessionData from inbound sessions (polling fallback)
 						const sessionData = (s.sessionData ?? s.session_data) as string | undefined;
 						if (sessionData) {
 							const dataKey = `${sid}-${sessionData.length}-${sessionData.slice(0, 20)}`;
@@ -622,24 +537,20 @@ export class YellowChannel {
 								this.processedSessionData.add(dataKey);
 								try {
 									const parsed = JSON.parse(sessionData);
-									// Only process messages from the other user
 									if (parsed?.from?.toLowerCase() !== myAddr) {
 										console.log("[Yellow] SessionData from polling:", sid.slice(0, 10), "type:", parsed?.type, "from:", parsed?.from?.slice(0, 10));
 										this.onMessage?.("session_message", parsed);
 									}
 								} catch {
-									// Ignore parse errors
 								}
 							}
 						}
 
-						// Also ensure we have an outbound session to this user
 						newRemoteUsers.add(otherKey);
 						continue;
 					}
 
 					if (!weAreParticipant && otherParticipant) {
-						// Someone else's [other, 0x0] market session — track for discovery
 						const ownerKey = otherParticipant.toLowerCase();
 						if (!this.remoteUsers.has(ownerKey)) {
 							this.remoteUsers.set(ownerKey, new Set());
@@ -649,7 +560,6 @@ export class YellowChannel {
 					}
 				}
 
-				// Create outbound bilateral sessions with discovered remote users
 				for (const remoteAddr of newRemoteUsers) {
 					if (!this.bilateralSessions.has(remoteAddr) && !this.bilateralAttempted.has(remoteAddr)) {
 						console.log("[Yellow] Discovered remote user:", remoteAddr.slice(0, 10), "- creating outbound bilateral");
@@ -659,9 +569,7 @@ export class YellowChannel {
 						!this.bilateralCreatedByUs.has(this.bilateralSessions.get(remoteAddr)!) &&
 						!this.bilateralAttempted.has(remoteAddr)
 					) {
-						// We have an inbound session from them but no outbound — create one
 						console.log("[Yellow] Have inbound from:", remoteAddr.slice(0, 10), "- creating outbound bilateral");
-						// Allow creating even though bilateralSessions has an entry (the inbound)
 						this.bilateralAttempted.add(remoteAddr);
 						this.createOutboundOnly(remoteAddr);
 					}
@@ -675,7 +583,6 @@ export class YellowChannel {
 				break;
 			}
 			case "asu": {
-				// ASU data might be nested in app_session or flat
 				const raw = data as Record<string, unknown>;
 				const appSession = raw?.app_session as Record<string, unknown> | undefined;
 				const sid = (appSession?.app_session_id ?? appSession?.appSessionId ?? raw?.app_session_id ?? raw?.appSessionId) as string | undefined;
@@ -687,7 +594,6 @@ export class YellowChannel {
 						const fromAddr = (parsed?.from as string) ?? "?";
 						const fromLower = fromAddr.toLowerCase();
 
-						// Skip self-echoes (messages we sent)
 						if (fromLower === this.walletAddress.toLowerCase()) {
 							break;
 						}
@@ -698,14 +604,12 @@ export class YellowChannel {
 						this.onMessage?.("session_message", data);
 					}
 				} else {
-					// Session invite or state update without data
 					console.log("[Yellow] ASU without sessionData:", sid?.slice(0, 10));
 					this.onMessage?.("session_invite", data);
 				}
 				break;
 			}
 			case "submit_app_state": {
-				// Ack for our own submitAppState
 				break;
 			}
 			case "close_app_session": {
@@ -734,7 +638,6 @@ export class YellowChannel {
 				const errData = data as { error?: string; message?: string };
 				const errMsg = errData?.error ?? errData?.message ?? String(data);
 
-				// Suppress expected errors from bilateral session attempts
 				if (typeof errMsg === "string" && (
 					errMsg.includes("non-participant") ||
 					errMsg.includes("not a participant") ||
@@ -753,17 +656,12 @@ export class YellowChannel {
 		}
 	}
 
-	/**
-	 * Create an outbound-only session when we already have an inbound from a user.
-	 * This is needed so both directions work independently.
-	 */
 	private async createOutboundOnly(remoteAddrLower: string): Promise<void> {
 		if (!this.ws) return;
 
 		const remoteChecksummed = this.checksumAddress(remoteAddrLower);
 		const nonce = Date.now() + Math.floor(Math.random() * 10000);
 
-		// Use a separate tracking for this — store under a prefixed key
 		const outboundKey = `out:${remoteAddrLower}`;
 		this.pendingBilateral.set(nonce, outboundKey);
 

@@ -39,11 +39,11 @@ const ERC20_ABI = [
 	},
 ] as const;
 
-export function toSD59x18(value: number): bigint {
+function toSD59x18(value: number): bigint {
 	return BigInt(Math.round(value * 1e18));
 }
 
-export function fromSD59x18(value: bigint): number {
+function fromSD59x18(value: bigint): number {
 	return Number(value) / 1e18;
 }
 
@@ -584,22 +584,3 @@ export function useCreateMarket() {
 	return { create, isPending, isConfirming, isConfirmed, txHash: hash, error: writeError };
 }
 
-export function useComputeCollateral(
-	marketAddress: `0x${string}` | undefined,
-	mu: number,
-	sigma: number,
-) {
-	const { data, isLoading, error } = useReadContract({
-		address: marketAddress!,
-		abi: PintelMarketABI,
-		functionName: "computeCollateral",
-		args: [toSD59x18(mu), toSD59x18(sigma)],
-		query: { enabled: !!marketAddress && sigma > 0 },
-	});
-
-	return {
-		requiredCollateral: data as bigint | undefined,
-		isLoading,
-		error,
-	};
-}

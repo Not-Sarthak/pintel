@@ -124,8 +124,6 @@ contract PintelMarket is Initializable, ReentrancyGuard {
         emit PositionClosed(positionId, msg.sender, refund);
     }
 
-    /// @notice Transfer a position to a new owner. Used for P2P trades
-    ///         where payment happens off-chain via Yellow Network state channels.
     function transferPosition(uint256 positionId, address newOwner) external nonReentrant {
         if (newOwner == address(0)) revert ZeroAddress();
         Position storage pos = positions[positionId];

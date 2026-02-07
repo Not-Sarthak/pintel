@@ -12,14 +12,12 @@ interface PositionsTableProps {
 	positions: PositionData[];
 	resolved?: boolean;
 	marketAddress: `0x${string}`;
-	onTxSuccess?: () => void;
 }
 
 export function PositionsTable({
 	positions,
 	resolved = false,
 	marketAddress,
-	onTxSuccess,
 }: PositionsTableProps) {
 	const { address } = useAccount();
 	const { close, isPending: isClosing, isConfirming: isCloseConfirming } =
