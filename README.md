@@ -2,12 +2,6 @@
 
 Because higher precision deserves higher returns
 
-## Protocol Integrations
-
-- **Yellow Network** — Off-chain order book for secondary position trading via ERC-7824 state channels
-- **ENS** — Subname registration (`*.pintel.eth`) and text records for market indexing and trader reputation
-- **Chainlink** — Price feed oracles for settlement and Automation keepers for trustless market resolution at expiry
-
 ## Deployed Contracts (Sepolia)
 
 | Contract | Address |
@@ -18,6 +12,16 @@ Because higher precision deserves higher returns
 | MockERC20 (collateral) | [`0xEb2927E0274d4A1D52685610bf256468b79EEa4d`](https://sepolia.etherscan.io/address/0xEb2927E0274d4A1D52685610bf256468b79EEa4d) |
 
 ENS: `pintel.eth` on Sepolia
+
+## Architecture
+
+![Pintel Architecture](./arch.png)
+
+## Protocol Integrations
+
+- **Yellow Network** — Off-chain order book for secondary position trading via ERC-7824 state channels
+- **ENS** — Subname registration (`*.pintel.eth`) and text records for market indexing and trader reputation
+- **Chainlink** — Price feed oracles for settlement and Automation keepers for trustless market resolution at expiry
 
 ## Contract Functions
 
