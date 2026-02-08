@@ -1,56 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { useAccount } from "wagmi";
 import { MarketCard } from "@/components/market/market-card";
-import { Button } from "@/components/ui/button";
+import { Marquee } from "@/components/ui/marquee";
 import { usePrices } from "@/hooks/use-prices";
 import { useAllMarkets } from "@/hooks/use-market";
-import { CATEGORIES } from "@/lib/gaussian";
 import { cn } from "@/lib/utils";
 
+const ASSET_LOGOS: Record<string, string> = {
+	BTC: "/images/logos/btc.png",
+	ETH: "/images/logos/eth.png",
+	SOL: "/images/logos/solana.png",
+};
+
 export default function MarketsPage() {
-	const [activeCategory, setActiveCategory] = useState("All");
 	const prices = usePrices();
 	const { address: account } = useAccount();
 	const { markets, isLoading } = useAllMarkets();
 
+	const priceEntries = Array.from(prices.entries());
+
 	return (
 		<div className="mx-auto min-w-6xl max-w-6xl border-x border-edge px-4 py-8 md:py-12">
-			<div className="mb-4 flex items-center gap-3">
-				<div className="flex items-center gap-2 overflow-x-auto pb-1">
-					{CATEGORIES.map((cat) => (
-						<button
-							key={cat}
-							type="button"
-							onClick={() => setActiveCategory(cat)}
-							className={cn(
-								"rounded-full px-4 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
-								activeCategory === cat
-									? "bg-primary text-primary-foreground"
-									: "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-							)}
-						>
-							{cat}
-						</button>
-					))}
-				</div>
-				<div className="flex-1" />
-				{prices.size > 0 && (
-					<div className="hidden sm:flex items-center gap-4 text-xs font-mono text-muted-foreground">
-						{Array.from(prices.entries()).map(([sym, data]) => (
-							<span key={sym} className="flex items-center gap-1">
-								<span className="font-medium text-foreground">{sym}</span>
-								<span>${data.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-								<span className={data.change24h >= 0 ? "text-green-500" : "text-red-500"}>
-									{data.change24h >= 0 ? "+" : ""}{data.change24h.toFixed(2)}%
+			{priceEntries.length > 0 && (
+				<div className="mb-6 rounded-lg border border-border bg-card overflow-hidden">
+					<Marquee pauseOnHover className="py-2 [--duration:25s] [--gap:2rem]">
+						{priceEntries.map(([sym, data]) => (
+							<div key={sym} className="flex items-center gap-2 text-sm">
+								{ASSET_LOGOS[sym] && (
+									<img src={ASSET_LOGOS[sym]} alt={sym} className="h-5 w-5 rounded-full" />
+								)}
+								<span className="text-foreground">{sym}</span>
+								<span className="text-muted-foreground">
+									${data.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
 								</span>
-							</span>
+								<span className={cn("flex items-center gap-0.5", data.change24h >= 0 ? "text-green-500" : "text-red-500")}>
+									<span className="text-[10px]">{data.change24h >= 0 ? "\u25B2" : "\u25BC"}</span>
+									{Math.abs(data.change24h).toFixed(2)}%
+								</span>
+							</div>
 						))}
-					</div>
-				)}
-			</div>
+					</Marquee>
+				</div>
+			)}
 
 			{!account && (
 				<div className="py-16 text-center text-muted-foreground">
@@ -65,13 +57,13 @@ export default function MarketsPage() {
 							key={i}
 							className="rounded-lg border border-border bg-card p-4 animate-pulse"
 						>
-							<div className="h-4 w-20 rounded bg-muted mb-3" />
-							<div className="h-5 w-full rounded bg-muted mb-2" />
-							<div className="h-5 w-3/4 rounded bg-muted mb-3" />
-							<div className="h-12 w-full rounded bg-muted mb-3" />
+							<div className="h-3 w-16 rounded bg-muted mb-3" />
+							<div className="h-4 w-full rounded bg-muted mb-2" />
+							<div className="h-4 w-2/3 rounded bg-muted mb-4" />
+							<div className="h-px bg-border mb-3" />
 							<div className="flex justify-between">
-								<div className="h-4 w-16 rounded bg-muted" />
-								<div className="h-4 w-16 rounded bg-muted" />
+								<div className="h-3 w-12 rounded bg-muted" />
+								<div className="h-3 w-16 rounded bg-muted" />
 							</div>
 						</div>
 					))}
@@ -80,21 +72,14 @@ export default function MarketsPage() {
 
 			{account && !isLoading && markets.length === 0 && (
 				<div className="py-16 text-center">
-					<p className="text-muted-foreground mb-4">No markets yet.</p>
-					<Button asChild>
-						<Link href="/create">Create One</Link>
-					</Button>
+					<p className="text-muted-foreground">No markets yet.</p>
 				</div>
 			)}
 
 			{account && !isLoading && markets.length > 0 && (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{markets.map((addr) => (
-						<MarketCard
-							key={addr}
-							address={addr}
-							activeCategory={activeCategory}
-						/>
+						<MarketCard key={addr} address={addr} />
 					))}
 				</div>
 			)}

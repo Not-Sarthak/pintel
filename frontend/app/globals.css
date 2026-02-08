@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Serif", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --color-lilac-50: oklch(0.97 0.02 280);
@@ -186,4 +186,30 @@
   to {
     clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
   }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+@utility animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+
+@utility animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
 }

@@ -81,7 +81,7 @@ function MarketResult({
 
 export function SearchDialog({ externalOpen, onClose }: { externalOpen?: boolean; onClose?: () => void } = {}) {
 	const [internalOpen, setInternalOpen] = useState(false);
-	const open = externalOpen ?? internalOpen;
+	const open = internalOpen || externalOpen === true;
 	const setOpen = (v: boolean | ((prev: boolean) => boolean)) => {
 		const val = typeof v === "function" ? v(open) : v;
 		setInternalOpen(val);
@@ -184,7 +184,7 @@ export function SearchDialog({ externalOpen, onClose }: { externalOpen?: boolean
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyDown={handleKeyDown}
-							placeholder="btc-markets.pintel.eth"
+							placeholder="<market_name>.pintel.eth"
 							className="h-12 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
 						/>
 						<kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border bg-muted px-1.5 text-[10px] text-muted-foreground">
@@ -240,7 +240,7 @@ export function SearchTrigger({ onClick }: { onClick: () => void }) {
 					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 				/>
 			</svg>
-			<span className="flex-1 text-left">Search</span>
+			<span className="flex-1 text-left">&lt;market_name&gt;.pintel.eth</span>
 			<kbd className="inline-flex h-5 items-center rounded border border-border bg-background px-1.5 text-[10px]">
 				&#8984;K
 			</kbd>

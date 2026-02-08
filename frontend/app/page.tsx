@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { LogoAnimation } from "@/components/layout/logo-animation";
+import { CrowdCanvas } from "@/components/layout/crowd-canvas";
 import { Button } from "@/components/ui/button";
-import { contentContainer } from "@/lib/grid-patterns";
 
 export default function Home() {
 	return (
-		<div className={contentContainer}>
-			<div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+		<div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
+			<CrowdCanvas
+				src="/images/peeps/all-peeps.png"
+				rows={15}
+				cols={7}
+				className="absolute inset-0 h-full w-full opacity-30"
+			/>
+
+			<div className="relative z-10 flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center pb-48">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
@@ -23,22 +30,19 @@ export default function Home() {
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-					className="mt-6 text-center text-sm text-muted-foreground max-w-md mx-auto leading-relaxed"
+					className="mt-6 text-center text-muted-foreground italic tracking-wide text-xl"
 				>
-					Because higher precision deserves higher returns
+					where people predict <span className="italic font-medium text-foreground">precisely</span> what happens next
 				</motion.p>
 
 				<motion.div
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
-					className="mt-8 flex items-center gap-3"
+					className="mt-8"
 				>
 					<Button asChild>
 						<Link href="/markets">Explore Markets</Link>
-					</Button>
-					<Button variant="outline" asChild>
-						<Link href="/create">Create Market</Link>
 					</Button>
 				</motion.div>
 			</div>

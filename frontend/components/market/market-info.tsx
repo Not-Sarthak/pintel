@@ -11,6 +11,9 @@ interface MarketInfoProps {
 
 export function MarketInfo({ market }: MarketInfoProps) {
 	const totalPoolDisplay = Number(market.totalPool) / 1e18;
+	const now = Date.now() / 1000;
+	const ended = now >= market.endTime;
+	const status = market.resolved ? "Resolved" : ended ? "Ended" : "Active";
 
 	return (
 		<div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -23,7 +26,9 @@ export function MarketInfo({ market }: MarketInfoProps) {
 						"inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
 						market.resolved
 							? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-							: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+							: ended
+								? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+								: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
 					)}
 				>
 					<span
@@ -31,10 +36,12 @@ export function MarketInfo({ market }: MarketInfoProps) {
 							"h-1.5 w-1.5 rounded-full",
 							market.resolved
 								? "bg-red-500"
-								: "bg-emerald-500 animate-pulse",
+								: ended
+									? "bg-amber-500 animate-pulse"
+									: "bg-emerald-500 animate-pulse",
 						)}
 					/>
-					{market.resolved ? "Resolved" : "Active"}
+					{status}
 				</span>
 			</div>
 

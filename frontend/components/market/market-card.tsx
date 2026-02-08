@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { MiniDistributionChart } from "@/components/market/distribution-chart";
+import { MagicCard } from "@/components/ui/magic-card";
 import { formatUSD } from "@/lib/gaussian";
 import { useMarket, useMarketPositions, useMarketENS } from "@/hooks/use-market";
 import { useYellowContext } from "@/components/providers/yellow-provider";
 import { usePrices } from "@/hooks/use-prices";
 import { cn } from "@/lib/utils";
+
+const INTER = { fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif' } as const;
 
 function detectSymbol(question: string): string | null {
 	const q = question.toUpperCase();
@@ -16,39 +19,58 @@ function detectSymbol(question: string): string | null {
 	return null;
 }
 
-interface MarketCardProps {
-	address: `0x${string}`;
-	activeCategory?: string;
+function StatusDot({ resolved, ended }: { resolved: boolean; ended: boolean }) {
+	if (resolved) {
+		return (
+			<span className="relative flex h-2.5 w-2.5" title="Resolved">
+				<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+			</span>
+		);
+	}
+	if (ended) {
+		return (
+			<span className="relative flex h-2.5 w-2.5" title="To Resolve">
+				<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+				<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+			</span>
+		);
+	}
+	return (
+		<span className="relative flex h-2.5 w-2.5" title="Active">
+			<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+			<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+		</span>
+	);
 }
 
-export function MarketCard({ address, activeCategory }: MarketCardProps) {
+interface MarketCardProps {
+	address: `0x${string}`;
+}
+
+export function MarketCard({ address }: MarketCardProps) {
 	const { market, isLoading } = useMarket(address);
 	const { positions } = useMarketPositions(
 		address,
 		market?.positionCount ?? 0,
 	);
-	const { ensName, category } = useMarketENS(address);
+	const { category } = useMarketENS(address);
 	const prices = usePrices();
 	const yellow = useYellowContext();
 	const onlineTraders = yellow.getOnlineTraders(address);
 
 	if (isLoading || !market) {
 		return (
-			<div className="rounded-lg border border-border bg-card p-4 animate-pulse">
-				<div className="h-4 w-20 rounded bg-muted mb-3" />
-				<div className="h-5 w-full rounded bg-muted mb-2" />
-				<div className="h-5 w-3/4 rounded bg-muted mb-3" />
-				<div className="h-12 w-full rounded bg-muted mb-3" />
+			<div className="rounded-xl border border-border bg-card p-4 animate-pulse" style={INTER}>
+				<div className="h-3 w-16 rounded bg-muted mb-3" />
+				<div className="h-4 w-full rounded bg-muted mb-2" />
+				<div className="h-4 w-2/3 rounded bg-muted mb-4" />
+				<div className="h-px bg-border mb-3" />
 				<div className="flex justify-between">
-					<div className="h-4 w-16 rounded bg-muted" />
-					<div className="h-4 w-16 rounded bg-muted" />
+					<div className="h-3 w-12 rounded bg-muted" />
+					<div className="h-3 w-16 rounded bg-muted" />
 				</div>
 			</div>
 		);
-	}
-
-	if (activeCategory && activeCategory !== "All") {
-		return null;
 	}
 
 	const symbol = detectSymbol(market.question);
@@ -65,94 +87,87 @@ export function MarketCard({ address, activeCategory }: MarketCardProps) {
 	const totalPoolDisplay = Number(market.totalPool) / 1e18;
 	const now = Date.now() / 1000;
 	const ended = now >= market.endTime;
-	const status = market.resolved ? "Resolved" : ended ? "To Resolve" : "Active";
 
 	return (
-		<Link href={`/market/${address}`} className="block group">
-			<div
-				className={cn(
-					"rounded-lg border border-border bg-card p-4 transition-all",
-					"hover:border-lilac-400/50 hover:shadow-md",
-					"dark:hover:border-lilac-500/40 dark:hover:shadow-lilac-900/20",
-				)}
+		<Link href={`/market/${address}`} className="block group" style={INTER}>
+			<MagicCard
+				gradientColor="var(--color-muted)"
+				gradientFrom="#9E7AFF"
+				gradientTo="#FE8BBB"
+				gradientSize={250}
+				gradientOpacity={0.5}
 			>
-				<div className="flex items-start justify-between gap-2 mb-3">
-					<span className="inline-flex items-center rounded-md bg-lilac-100 px-2 py-0.5 text-xs font-medium text-lilac-700 dark:bg-lilac-900/40 dark:text-lilac-300">
-						{category || "Crypto"}
-					</span>
-					<span className={cn(
-						"text-xs font-medium",
-						market.resolved ? "text-emerald-500" : ended ? "text-amber-500" : "text-muted-foreground",
-					)}>
-						{status}
-					</span>
-				</div>
+				<div className="p-4">
+					{/* Header: category + status */}
+					<div className="flex items-center justify-between mb-3">
+						<span className="text-[11px] text-muted-foreground">
+							{category || "Crypto"}
+						</span>
+						<StatusDot resolved={market.resolved} ended={ended} />
+					</div>
 
-				<h3 className="text-sm font-semibold text-card-foreground mb-1 line-clamp-2 group-hover:text-lilac-600 dark:group-hover:text-lilac-400 transition-colors">
-					{market.question}
-				</h3>
-
-				{ensName && (
-					<p className="text-xs font-mono text-muted-foreground mb-2">
-						{ensName}
+					{/* Question */}
+					<p className="text-sm text-card-foreground line-clamp-2 mb-2">
+						{market.question}
 					</p>
-				)}
 
-				{market.resolved && (
-					<div className="flex items-center gap-2 mb-3 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1.5">
-						<span className="text-xs text-emerald-600 dark:text-emerald-400">Answer:</span>
-						<span className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300">
-							{market.outcome.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-						</span>
-					</div>
-				)}
+					{/* Live price row */}
+					{livePrice && !market.resolved && (
+						<div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+							<span className="text-foreground">
+								${livePrice.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+							</span>
+							<span className={cn("flex items-center gap-0.5", livePrice.change24h >= 0 ? "text-green-500" : "text-red-500")}>
+								<span className="text-[10px]">{livePrice.change24h >= 0 ? "\u25B2" : "\u25BC"}</span>
+								{Math.abs(livePrice.change24h).toFixed(2)}%
+							</span>
+							<span>
+								H: ${livePrice.high24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+								L: ${livePrice.low24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+							</span>
+						</div>
+					)}
 
-				{livePrice && !market.resolved && (
-					<div className="flex items-center gap-2 mb-3 text-xs font-mono">
-						<span className="text-foreground font-medium">
-							${livePrice.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-						</span>
-						<span className={livePrice.change24h >= 0 ? "text-green-500" : "text-red-500"}>
-							{livePrice.change24h >= 0 ? "+" : ""}{livePrice.change24h.toFixed(2)}%
-						</span>
-						<span className="text-muted-foreground">
-							H: ${livePrice.high24h.toLocaleString(undefined, { maximumFractionDigits: 0 })} L: ${livePrice.low24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-						</span>
-					</div>
-				)}
+					{/* Resolved outcome */}
+					{market.resolved && (
+						<div className="flex items-center gap-2 mb-3 text-xs">
+							<span className="text-muted-foreground">Answer:</span>
+							<span className="text-emerald-600 dark:text-emerald-400">
+								{market.outcome.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+							</span>
+						</div>
+					)}
 
-				{curvePositions.length > 0 && (
-					<div className="mb-3 rounded-md bg-muted/50 overflow-hidden">
-						<MiniDistributionChart positions={curvePositions} />
-					</div>
-				)}
+					{/* Distribution chart */}
+					{curvePositions.length > 0 && (
+						<div className="mb-3 rounded-md bg-muted/40 overflow-hidden">
+							<MiniDistributionChart positions={curvePositions} />
+						</div>
+					)}
 
-				<div className="flex items-center justify-between text-xs text-muted-foreground">
-					<div className="flex items-center gap-3">
-						<span className="font-mono font-medium text-foreground">
-							{formatUSD(totalPoolDisplay)}
-						</span>
-						<span>Pool</span>
-					</div>
-					<div className="flex items-center gap-3">
-						{onlineTraders.length > 0 && (
-							<div className="flex items-center gap-1">
-								<span className="relative flex h-1.5 w-1.5">
-									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-									<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-								</span>
-								<span className="text-emerald-600 dark:text-emerald-400 font-medium">
-									{onlineTraders.length} online
-								</span>
-							</div>
-						)}
-						<div className="flex items-center gap-1">
-							<span className="font-mono">{market.positionCount}</span>
-							<span>positions</span>
+					{/* Footer: pool + positions */}
+					<div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border">
+						<div className="flex items-center gap-1.5">
+							<span className="text-foreground">{formatUSD(totalPoolDisplay)}</span>
+							<span>Pool</span>
+						</div>
+						<div className="flex items-center gap-3">
+							{onlineTraders.length > 0 && (
+								<div className="flex items-center gap-1">
+									<span className="relative flex h-1.5 w-1.5">
+										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+										<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+									</span>
+									<span className="text-emerald-600 dark:text-emerald-400">
+										{onlineTraders.length} online
+									</span>
+								</div>
+							)}
+							<span>{market.positionCount} positions</span>
 						</div>
 					</div>
 				</div>
-			</div>
+			</MagicCard>
 		</Link>
 	);
 }
