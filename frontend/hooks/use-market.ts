@@ -412,6 +412,7 @@ export function useOpenPosition(marketAddress: `0x${string}` | undefined) {
 			collateralAmount: bigint,
 			tokenAddress: `0x${string}`,
 		) => {
+			console.log("[Position] Approving collateral...", { mu, sigma, collateral: collateralAmount.toString(), token: tokenAddress, market: marketAddress });
 			approve(
 				{
 					address: tokenAddress,
@@ -421,19 +422,35 @@ export function useOpenPosition(marketAddress: `0x${string}` | undefined) {
 				},
 				{
 					onSuccess: async (hash) => {
-						await client!.waitForTransactionReceipt({ hash });
-						openPos(
-							{
-								address: marketAddress!,
-								abi: PintelMarketABI,
-								functionName: "openPosition",
-								args: [toSD59x18(mu), toSD59x18(sigma), collateralAmount],
-							},
-							{
-								onSuccess: (hash) => console.log("Position Created:", hash),
-							},
-						);
+						console.log("[Position] Approval tx sent:", hash);
+						try {
+							const receipt = await client!.waitForTransactionReceipt({ hash });
+							console.log("[Position] Approval confirmed, status:", receipt.status);
+							console.log("[Position] Opening position...", { mu: toSD59x18(mu).toString(), sigma: toSD59x18(sigma).toString(), collateral: collateralAmount.toString() });
+							openPos(
+								{
+									address: marketAddress!,
+									abi: PintelMarketABI,
+									functionName: "openPosition",
+									args: [toSD59x18(mu), toSD59x18(sigma), collateralAmount],
+								},
+								{
+									onSuccess: (hash) => console.log("Position Created:", hash),
+									onError: (err) => {
+									const msg = (err as Error).message || "";
+									if (msg.includes("SigmaTooLow")) console.error("[Position] Sigma too low for this market's k/b params");
+									else if (msg.includes("PeakExceedsBacking")) console.error("[Position] Peak exceeds backing — try a larger sigma or smaller k");
+									else if (msg.includes("MarketExpired")) console.error("[Position] Market has expired");
+									else if (msg.includes("MarketResolved")) console.error("[Position] Market already resolved");
+									else console.error("[Position] openPosition error:", err);
+								},
+								},
+							);
+						} catch (err) {
+							console.error("[Position] Approval receipt error:", err);
+						}
 					},
+					onError: (err) => console.error("[Position] Approve error:", err),
 				},
 			);
 		},

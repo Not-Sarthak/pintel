@@ -19,8 +19,8 @@ export const config = createConfig(
 	getDefaultConfig({
 		chains: [sepolia, mainnet],
 		transports: {
-			[sepolia.id]: http(),
-			[mainnet.id]: http("https://1rpc.io/sepolia"),
+			[sepolia.id]: http("https://1rpc.io/sepolia"),
+			[mainnet.id]: http("https://mainnet.infura.io/v3/ac32b22de500426487b6e43291cbb008"),
 		},
 		walletConnectProjectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "",
 		appName: "Pintel",
