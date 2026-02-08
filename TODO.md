@@ -1,5 +1,0 @@
-- Landing Page Illustration
-- Market Page Ticker Tap and Category Tab [Explain Precision Markets, Solution and Resolver]
-- Create Page UI [Highlight ENS]
-- Profile Page UI [Highlight ENS]
-- Order Placement UI [Highlight Yellow Network]

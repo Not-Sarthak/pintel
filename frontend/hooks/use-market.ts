@@ -97,7 +97,6 @@ export function useMarketENS(marketAddress: `0x${string}` | undefined) {
 					if (cat) setCategory(cat);
 				}
 			} catch (err) {
-				console.error("[useMarketENS] error:", err);
 			}
 		})();
 	}, [client, marketAddress]);
@@ -413,15 +412,6 @@ export function useOpenPosition(marketAddress: `0x${string}` | undefined) {
 			collateralAmount: bigint,
 			tokenAddress: `0x${string}`,
 		) => {
-			console.log("[openPosition] start", {
-				market: marketAddress,
-				mu,
-				sigma,
-				muSD59x18: toSD59x18(mu).toString(),
-				sigmaSD59x18: toSD59x18(sigma).toString(),
-				collateral: collateralAmount.toString(),
-				token: tokenAddress,
-			});
 			approve(
 				{
 					address: tokenAddress,
@@ -431,10 +421,7 @@ export function useOpenPosition(marketAddress: `0x${string}` | undefined) {
 				},
 				{
 					onSuccess: async (hash) => {
-						console.log("[openPosition] approve tx sent:", hash);
-						console.log("[openPosition] waiting for approve confirmation...");
 						await client!.waitForTransactionReceipt({ hash });
-						console.log("[openPosition] approve confirmed, sending openPosition...");
 						openPos(
 							{
 								address: marketAddress!,
@@ -443,12 +430,10 @@ export function useOpenPosition(marketAddress: `0x${string}` | undefined) {
 								args: [toSD59x18(mu), toSD59x18(sigma), collateralAmount],
 							},
 							{
-								onSuccess: (hash) => console.log("[openPosition] openPosition tx sent:", hash),
-								onError: (err) => console.error("[openPosition] openPosition error:", err),
+								onSuccess: (hash) => console.log("Position Created:", hash),
 							},
 						);
 					},
-					onError: (err) => console.error("[openPosition] approve error:", err),
 				},
 			);
 		},
@@ -495,7 +480,7 @@ export function useTransferPosition(marketAddress: `0x${string}` | undefined) {
 	const transferPosition = useCallback(
 		(positionId: number, newOwner: `0x${string}`) => {
 			if (!marketAddress) return;
-			console.log("[transferPosition] transferring #" + positionId + " to " + newOwner);
+			console.log("Position Transfer: #" + positionId + " \u2192 " + newOwner);
 			writeContract({
 				address: marketAddress,
 				abi: PintelMarketABI,
@@ -556,11 +541,6 @@ export function useCreateMarket() {
 				endTime: BigInt(params.endTime),
 				category: params.category,
 			};
-			console.log("[useCreateMarket] writeContract args:", {
-				address: FACTORY_ADDRESS,
-				functionName: "createMarket",
-				args: [args],
-			});
 			writeContract(
 				{
 					address: FACTORY_ADDRESS,
@@ -569,17 +549,12 @@ export function useCreateMarket() {
 					args: [args],
 				},
 				{
-					onSuccess: (hash) => console.log("[useCreateMarket] tx sent:", hash),
-					onError: (err) => console.error("[useCreateMarket] error:", err),
+					onSuccess: (hash) => console.log("Market Created:", hash),
 				},
 			);
 		},
 		[writeContract],
 	);
-
-	if (writeError) {
-		console.error("[useCreateMarket] writeError:", writeError);
-	}
 
 	return { create, isPending, isConfirming, isConfirmed, txHash: hash, error: writeError };
 }
@@ -664,4 +639,3 @@ export function useTraderProfile(address: `0x${string}` | undefined) {
 
 	return { stats, createdMarkets, isLoading };
 }
-

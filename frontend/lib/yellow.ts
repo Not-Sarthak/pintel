@@ -83,7 +83,6 @@ export class YellowChannel {
 
 	private send(msg: string) {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-			console.error("[Yellow] Cannot send -- WebSocket not open");
 			this.onMessage?.("error", { error: "Connection lost. Please reconnect." });
 			return;
 		}
@@ -118,23 +117,19 @@ export class YellowChannel {
 							const raw = JSON.parse(event.data);
 							this.handleResponse(raw);
 						} catch (err2) {
-							console.error("[Yellow] Failed to parse message:", err2, event.data);
 						}
 					}
 				};
 
 				this.ws.onclose = () => {
-					console.log("[Yellow] Disconnected from ClearNode");
 					this.authenticated = false;
 					if (!this.intentionalClose) {
-						console.warn("[Yellow] Connection dropped unexpectedly");
 						this.onMessage?.("error", { error: "Connection lost. Please reconnect." });
 					}
 					this.onDisconnect?.();
 				};
 
 				this.ws.onerror = (err) => {
-					console.error("[Yellow] WebSocket error:", err);
 					reject(err);
 				};
 			} catch (err) {
@@ -173,7 +168,6 @@ export class YellowChannel {
 			expires_at: this.authParams.expires_at,
 			scope: this.authParams.scope,
 		});
-		console.log("[Yellow] Sending auth request...");
 		this.send(authReq);
 	}
 
@@ -187,14 +181,12 @@ export class YellowChannel {
 	}
 
 	async requestFaucet(): Promise<void> {
-		console.log("[Yellow] Requesting faucet tokens...");
 		const res = await fetch("https://clearnet-sandbox.yellow.com/faucet/requestTokens", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ userAddress: this.walletAddress }),
 		});
 		const data = await res.json();
-		console.log("[Yellow] Faucet response:", data);
 		this.onMessage?.("faucet", data);
 	}
 
@@ -204,7 +196,6 @@ export class YellowChannel {
 			destination,
 			allocations: [{ asset, amount }],
 		});
-		console.log("[Yellow] Sending transfer:", { destination, asset, amount });
 		this.send(msg);
 	}
 
@@ -230,7 +221,6 @@ export class YellowChannel {
 		const key = marketAddress.toLowerCase();
 
 		if (this.marketSessions.has(key)) {
-			console.log("[Yellow] Already in market session:", key);
 			return;
 		}
 
@@ -260,7 +250,6 @@ export class YellowChannel {
 				},
 			],
 		});
-		console.log("[Yellow] Joining market session for:", key);
 		this.send(msg);
 	}
 
@@ -302,10 +291,8 @@ export class YellowChannel {
 					},
 				],
 			});
-			console.log("[Yellow] Creating outbound bilateral session with:", remoteChecksummed.slice(0, 10));
 			this.send(msg);
 		} catch (err) {
-			console.error("[Yellow] Failed to create bilateral session:", err);
 			this.pendingBilateral.delete(nonce);
 		}
 	}
@@ -328,7 +315,6 @@ export class YellowChannel {
 				});
 				this.send(msg);
 			} catch (err) {
-				console.error("[Yellow] Failed to submit to own session:", err);
 			}
 		}
 
@@ -367,7 +353,6 @@ export class YellowChannel {
 			});
 			this.send(msg);
 		} catch (err) {
-			console.error("[Yellow] Error closing market session:", err);
 		}
 
 		this.ownSessionIds.delete(sessionId);
@@ -389,7 +374,6 @@ export class YellowChannel {
 		};
 
 		if (res.error) {
-			console.error("[Yellow] Error:", res.error);
 			this.onMessage?.("error", res.error);
 			return;
 		}
@@ -431,7 +415,7 @@ export class YellowChannel {
 				this.onMessage?.("balances", data);
 				break;
 			case "transfer":
-				console.log("[Yellow] Transfer result:", data);
+				console.log("Yellow Transfer:", data);
 				this.onMessage?.("transfer", data);
 				break;
 			case "bu":
@@ -441,8 +425,7 @@ export class YellowChannel {
 				const rawCreated = Array.isArray(data) ? (data as unknown[])[0] : data;
 				const created = rawCreated as Record<string, unknown>;
 				const sid = (created?.app_session_id ?? created?.appSessionId) as string | undefined;
-				console.log("[Yellow] create_app_session response:", { sid: sid?.slice(0, 10), nonce: created?.nonce, participants: created?.participants, pendingBilateral: this.pendingBilateral.size, pendingJoins: this.pendingJoins.size, isArray: Array.isArray(data) });
-				if (!sid) break;
+					if (!sid) break;
 
 				const rawNonce = created?.nonce;
 				const nonceNum = typeof rawNonce === "string" ? Number(rawNonce) : (rawNonce as number ?? 0);
@@ -453,7 +436,6 @@ export class YellowChannel {
 					const entry = this.pendingBilateral.entries().next().value as [number, string];
 					bilateralRemote = entry[1];
 					this.pendingBilateral.delete(entry[0]);
-					console.log("[Yellow] Bilateral matched via fallback (no pending markets)");
 				} else if (bilateralRemote) {
 					this.pendingBilateral.delete(nonceNum);
 				}
@@ -464,7 +446,6 @@ export class YellowChannel {
 					this.bilateralSessions.set(actualRemote, sid);
 					this.bilateralCreatedByUs.add(sid);
 					this.ownSessionIds.add(sid);
-					console.log("[Yellow] Outbound bilateral created:", actualRemote.slice(0, 10), "sid:", sid.slice(0, 10));
 					this.onMessage?.("session_created", data);
 					break;
 				}
@@ -486,7 +467,6 @@ export class YellowChannel {
 					this.marketSessions.set(marketKey, sid);
 					this.sessionToMarket.set(sid, marketKey);
 					this.ownSessionIds.add(sid);
-					console.log("[Yellow] Market session created:", marketKey, "sid:", sid.slice(0, 10));
 					this.getAppSessions();
 				}
 
@@ -527,7 +507,6 @@ export class YellowChannel {
 						if (!this.bilateralSessions.has(otherKey)) {
 							this.bilateralSessions.set(otherKey, sid);
 							this.ownSessionIds.add(sid);
-							console.log("[Yellow] Adopted inbound bilateral session from:", otherKey.slice(0, 10), "sid:", sid.slice(0, 10));
 						}
 
 						const sessionData = (s.sessionData ?? s.session_data) as string | undefined;
@@ -538,7 +517,6 @@ export class YellowChannel {
 								try {
 									const parsed = JSON.parse(sessionData);
 									if (parsed?.from?.toLowerCase() !== myAddr) {
-										console.log("[Yellow] SessionData from polling:", sid.slice(0, 10), "type:", parsed?.type, "from:", parsed?.from?.slice(0, 10));
 										this.onMessage?.("session_message", parsed);
 									}
 								} catch {
@@ -562,22 +540,16 @@ export class YellowChannel {
 
 				for (const remoteAddr of newRemoteUsers) {
 					if (!this.bilateralSessions.has(remoteAddr) && !this.bilateralAttempted.has(remoteAddr)) {
-						console.log("[Yellow] Discovered remote user:", remoteAddr.slice(0, 10), "- creating outbound bilateral");
 						this.createBilateralSession(remoteAddr);
 					} else if (
 						this.bilateralSessions.has(remoteAddr) &&
 						!this.bilateralCreatedByUs.has(this.bilateralSessions.get(remoteAddr)!) &&
 						!this.bilateralAttempted.has(remoteAddr)
 					) {
-						console.log("[Yellow] Have inbound from:", remoteAddr.slice(0, 10), "- creating outbound bilateral");
 						this.bilateralAttempted.add(remoteAddr);
 						this.createOutboundOnly(remoteAddr);
 					}
 				}
-
-				const outbound = [...this.bilateralSessions.values()].filter((sid) => this.bilateralCreatedByUs.has(sid)).length;
-				const inbound = this.bilateralSessions.size - outbound;
-				console.log("[Yellow] Sessions: outbound:", outbound, "inbound:", inbound, "remoteUsers:", this.remoteUsers.size);
 
 				this.onMessage?.("app_sessions", { sessions });
 				break;
@@ -598,13 +570,11 @@ export class YellowChannel {
 							break;
 						}
 
-						console.log("[Yellow] ASU:", sid?.slice(0, 10), "type:", parsed?.type, "from:", fromAddr.slice(0, 10));
 						this.onMessage?.("session_message", parsed);
 					} catch {
 						this.onMessage?.("session_message", data);
 					}
 				} else {
-					console.log("[Yellow] ASU without sessionData:", sid?.slice(0, 10));
 					this.onMessage?.("session_invite", data);
 				}
 				break;
@@ -643,11 +613,9 @@ export class YellowChannel {
 					errMsg.includes("not a participant") ||
 					errMsg.includes("unauthorized")
 				)) {
-					console.log("[Yellow] Suppressed expected error:", errMsg);
 					break;
 				}
 
-				console.error("[Yellow] ClearNode error:", errMsg);
 				this.onMessage?.("error", data);
 				break;
 			}
@@ -689,10 +657,8 @@ export class YellowChannel {
 					},
 				],
 			});
-			console.log("[Yellow] Creating additional outbound session with:", remoteChecksummed.slice(0, 10));
 			this.send(msg);
 		} catch (err) {
-			console.error("[Yellow] Failed to create outbound session:", err);
 			this.pendingBilateral.delete(nonce);
 		}
 	}
@@ -706,8 +672,6 @@ export class YellowChannel {
 				(data as Record<string, string>)?.challengeMessage ??
 				String(data);
 
-			console.log("[Yellow] Received auth challenge, signing with wallet...");
-
 			const authSigner = createEIP712AuthMessageSigner(
 				this.walletClient,
 				this.authParams,
@@ -719,9 +683,7 @@ export class YellowChannel {
 				challenge,
 			);
 			this.send(verifyMsg);
-			console.log("[Yellow] Auth verify sent");
 		} catch (err) {
-			console.error("[Yellow] Auth challenge failed:", err);
 			this.onMessage?.("error", "Auth challenge signing failed");
 		}
 	}

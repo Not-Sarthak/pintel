@@ -43,8 +43,7 @@ const saveToStorage = (mode: ThemeMode) => {
 	if (typeof window === "undefined") return;
 	try {
 		localStorage.setItem(STORAGE_KEY, mode);
-	} catch (error) {
-		console.warn("Failed to save theme to localStorage:", error);
+	} catch {
 	}
 };
 

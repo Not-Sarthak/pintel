@@ -131,7 +131,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 				});
 
 				channel.setDisconnectHandler(() => {
-					console.log("[YellowProvider] Connection dropped, resetting state");
 					channelRef.current = null;
 					connectPromiseRef.current = null;
 					setIsConnected(false);
@@ -140,7 +139,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 					if (walletClient?.account && joinedMarketsRef.current.size > 0) {
 						const attempt = reconnectAttemptRef.current++;
 						const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
-						console.log(`[YellowProvider] Auto-reconnecting in ${delay}ms (attempt ${attempt + 1})`);
 						toast.error(`Yellow connection lost. Reconnecting in ${Math.round(delay / 1000)}s...`);
 						reconnectTimerRef.current = setTimeout(async () => {
 							try {
@@ -151,8 +149,7 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 								}
 								reconnectAttemptRef.current = 0;
 								toast.success("Yellow reconnected!");
-							} catch (err) {
-								console.error("[YellowProvider] Reconnect failed:", err);
+							} catch {
 							}
 						}, delay);
 					} else {
@@ -188,7 +185,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 								channelRef.current?.getBalance();
 								break;
 							case "faucet":
-								console.log("[YellowProvider] Faucet result:", data);
 								setTimeout(() => channelRef.current?.getBalance(), 2000);
 								break;
 							case "transfer": {
@@ -206,7 +202,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 								handleSessionMessageRef.current(data);
 								break;
 							case "session_invite":
-								console.log("[YellowProvider] Session invite received");
 								break;
 							case "error": {
 								const errMsg =
@@ -238,7 +233,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 				await channel.getBalance();
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : "Connection failed";
-				console.error("[YellowProvider] Connect failed:", msg);
 				setError(msg);
 				if (channelRef.current) {
 					channelRef.current.disconnect();
@@ -392,12 +386,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 				};
 				const senderAddr = sync.from.toLowerCase();
 
-				console.log("[YellowProvider] Sync received:", {
-					from: senderAddr,
-					askCount: sync.asks?.length,
-					market: sync.market ?? "all",
-				});
-
 				for (const market of markets) {
 					if (!heartbeatMap.current.has(market)) {
 						heartbeatMap.current.set(market, new Map());
@@ -423,7 +411,6 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 								from: a.from,
 								ts: a.ts,
 							}));
-						console.log("[YellowProvider] Updating asks for market:", market, "synced:", synced.length, "others:", others.length, "filled:", filledPositionIds.current.size);
 						next.set(market, [...synced, ...others].slice(0, 50));
 						return next;
 					});
@@ -468,8 +455,7 @@ export function YellowProvider({ children }: { children: ReactNode }) {
 
 		try {
 			await channelRef.current.joinMarketSession(marketAddress);
-		} catch (err) {
-			console.error("[YellowProvider] Failed to join market:", err);
+		} catch {
 		}
 
 		if (!syncIntervalRef.current) {

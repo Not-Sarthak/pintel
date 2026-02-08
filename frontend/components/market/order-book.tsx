@@ -154,8 +154,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 			toast.success("Ask posted to order book!");
 			setSellPositionId(null);
 			setAskPrice("");
-		} catch (err) {
-			console.error("[OrderBook] Post ask failed:", err);
+		} catch {
 			toast.error("Failed to post ask");
 		} finally {
 			setPosting(false);
@@ -173,8 +172,7 @@ export function OrderBook({ marketAddress, positions = [], market, allPositions 
 				buyer: account!,
 				seller: ask.from,
 			});
-		} catch (err) {
-			console.error("[OrderBook] Buy failed:", err);
+		} catch {
 			toast.error("Buy failed");
 		} finally {
 			setBuying(null);
