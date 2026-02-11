@@ -2,6 +2,8 @@
 
 Because higher precision deserves higher returns
 
+> Frontend lives on the [`frontend`](../../tree/frontend) branch.
+
 ## Deployed Contracts (Sepolia)
 
 | Contract | Address |
