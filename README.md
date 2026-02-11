@@ -13,7 +13,7 @@ Because higher precision deserves higher returns
 
 ENS: `pintel.eth` on Sepolia
 
-## Architecture
+## Architecture 
 
 ![Pintel Architecture](./arch.png)
 
